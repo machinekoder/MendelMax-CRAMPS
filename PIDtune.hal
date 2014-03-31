@@ -1,0 +1,161 @@
+loadrt pid num_chan=2
+loadrt limit1 count=2
+
+# Python user-mode HAL module to interface with an I2C PWM generator
+loadusr -Wn i2c_pwm ./python/Pwm.py --name i2c_pwm --bus_id 2 --address 70 --interval 0.05
+
+# Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
+loadusr -Wn i2c_temp ./python/Temperature.py --name i2c_temp --bus_id 2 --address 72 --interval 0.05 --filter_size 20 --channels 00:epcos_B57560G1104,02:artifex_hb
+
+# start haltalk server
+loadusr -W haltalk --ini haltalk.ini
+
+# ################################################
+# THREADS
+# ################################################
+loadrt threads name1=servo-thread period1=10000000
+
+addf pid.0.do-pid-calcs                   servo-thread
+addf pid.1.do-pid-calcs                   servo-thread
+addf limit1.0                             servo-thread
+addf limit1.1                             servo-thread
+
+# wait the halcmd script until the UI has created the remote component 'pidctrl':
+# waitexists pidctrl
+
+# OR preconfigure the remote component like so
+# in this case no waiting required
+# pin count, name, type, direction must match exactly what
+# is in the GUI
+newcomp pidctrl timer=100 acceptdefaults
+newpin pidctrl pidctrl.Pgain              float io
+newpin pidctrl pidctrl.Igain              float io
+newpin pidctrl pidctrl.Dgain              float io
+newpin pidctrl pidctrl.maxerrorI          float io
+newpin pidctrl pidctrl.bias               float io
+newpin pidctrl pidctrl.enable             bit out
+newpin pidctrl pidctrl.command            float out
+newpin pidctrl pidctrl.feedback           float in eps=0.01
+newpin pidctrl pidctrl.output             float in eps=0.01
+ready  pidctrl
+
+# at this stage, the component and its pins exist
+# and can be linked to
+       
+# ##################################################
+# PWM and Temperature Signals
+# ##################################################
+
+# Define signals to use elsewhere (ie: M1xx codes)
+# If you change any names here, lots of things will break!
+newsig e0.temp.set   float
+newsig e0.temp.meas  float
+newsig bed.temp.set  float
+newsig bed.temp.meas float
+
+# Bed Heater FET 1
+setp i2c_pwm.out-00.enable 1
+setp i2c_pwm.out-00.value  0.0
+
+# E0 Heater FET 2
+setp i2c_pwm.out-01.enable 1
+setp i2c_pwm.out-01.value  0.0
+
+# Fan 1 FET 3
+setp i2c_pwm.out-02.enable 1
+setp i2c_pwm.out-02.value  0.0
+
+# FET 4 - Fan / LED
+setp i2c_pwm.out-03.enable 1
+setp i2c_pwm.out-03.value  0.0
+
+# FET 5 - Fan / LED
+setp i2c_pwm.out-04.enable 1
+setp i2c_pwm.out-04.value  0.0
+
+# FET 6 - Fan / LED
+setp i2c_pwm.out-05.enable 1
+setp i2c_pwm.out-05.value  0.0
+
+# FET 7 - Fan / LED
+setp i2c_pwm.out-06.enable 1
+setp i2c_pwm.out-06.value  0.0
+
+# FET 8 - Fan / LED
+setp i2c_pwm.out-07.enable 1
+setp i2c_pwm.out-07.value  0.0
+
+
+# PID for Extruder 0 temperature control
+net e0.temp.meas    <= i2c_temp.ch-00.value
+net e0.temp.meas    => pid.0.feedback
+
+sets e0.temp.set  0
+#net e0.temp.set     => pid.0.command
+
+net e0.heater  <= pid.0.output
+net e0.heater  => limit1.0.in
+net e0.heaterl <= limit1.0.out
+net e0.heaterl => i2c_pwm.out-01.value
+
+# Limit heater PWM to positive values
+# PWM mimics hm2 implementation, which generates output for negative values
+setp limit1.0.min 0
+setp limit1.0.max 1
+
+
+# PID for Bed temperature control
+net bed.temp.meas    <= i2c_temp.ch-02.value
+net bed.temp.meas    => pid.1.feedback
+
+sets bed.temp.set  0
+net bed.temp.set     => pid.1.command
+
+net bed.heater  <= pid.1.output
+net bed.heater  => limit1.1.in
+net bed.heaterl <= limit1.1.out
+net bed.heaterl => i2c_pwm.out-00.value
+
+# Limit heater PWM to positive values
+# PWM mimics hm2 implementation, which generates output for negative values
+setp limit1.1.min 0
+setp limit1.1.max 1
+
+
+# PID Parameters for adjusting temperature control
+# Extruder
+#setp pid.0.FF0      0  
+#setp pid.0.FF1      0  
+#setp pid.0.FF2      0  
+setp pid.0.Pgain  0.3
+setp pid.0.Igain  0.00000
+setp pid.0.Dgain  0.0
+setp pid.0.maxerrorI 1.0
+setp pid.0.bias    0.5  
+setp pid.0.enable   1
+
+#newsig Pgain float
+#
+net Pgain <= pidctrl.Pgain 
+net Pgain => pid.0.Pgain
+net Igain pidctrl.Igain => pid.0.Igain
+net Dgain pidctrl.Dgain => pid.0.Dgain
+net maxerrorI pidctrl.maxerrorI => pid.0.maxerrorI
+net bias pidctrl.bias => pid.0.bias
+net enable pidctrl.enable => pid.0.enable
+net command pidctrl.command => pid.0.command
+net e0.temp.meas => pidctrl.feedback
+net e0.heater  => pidctrl.output
+
+# Bed
+#setp pid.1.FF0      0  
+#setp pid.1.FF1      0  
+#setp pid.1.FF2      0  
+setp pid.1.Pgain  1
+setp pid.1.Igain  0.0
+setp pid.1.Dgain  0.0
+setp pid.1.maxerrorI 1.0
+setp pid.1.bias    0.5  
+setp pid.1.enable   1
+
+start

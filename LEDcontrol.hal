@@ -1,0 +1,116 @@
+loadrt led_dim count=3
+
+# Python user-mode HAL module to interface with an I2C PWM generator
+loadusr -Wn i2c_pwm ./python/Pwm.py --name i2c_pwm --bus_id 2 --address 70 --interval 0.05
+
+# start haltalk server
+loadusr -W haltalk --ini haltalk.ini
+
+# ################################################
+# THREADS
+# ################################################
+loadrt threads name1=run-thread period1=100000000
+
+addf led-dim.0.update   run-thread
+addf led-dim.1.update   run-thread
+addf led-dim.2.update   run-thread
+
+# wait the halcmd script until the UI has created the remote component 'pidctrl':
+# waitexists pidctrl
+
+# OR preconfigure the remote component like so
+# in this case no waiting required
+# pin count, name, type, direction must match exactly what
+# is in the GUI
+newcomp ledctrl timer=100 acceptdefaults
+newpin ledctrl ledctrl.color.r            u32 out
+newpin ledctrl ledctrl.color.g            u32 out
+newpin ledctrl ledctrl.color.b            u32 out
+newpin ledctrl ledctrl.color.a            u32 out
+newpin ledctrl ledctrl.color.h            float out
+newpin ledctrl ledctrl.color.s            float out
+newpin ledctrl ledctrl.color.v            float out
+ready  ledctrl
+
+# at this stage, the component and its pins exist
+# and can be linked to
+       
+# ##################################################
+# PWM and Temperature Signals
+# ##################################################
+
+# Define signals to use elsewhere (ie: M1xx codes)
+# If you change any names here, lots of things will break!
+newsig e0.temp.set   float
+newsig e0.temp.meas  float
+newsig bed.temp.set  float
+newsig bed.temp.meas float
+
+# Bed Heater FET 1
+setp i2c_pwm.out-00.enable 1
+setp i2c_pwm.out-00.value  0.0
+
+# E0 Heater FET 2
+setp i2c_pwm.out-01.enable 1
+setp i2c_pwm.out-01.value  0.0
+
+# Fan 1 FET 3
+setp i2c_pwm.out-02.enable 1
+setp i2c_pwm.out-02.value  0.0
+
+# FET 4 - Fan / LED
+setp i2c_pwm.out-03.enable 1
+setp i2c_pwm.out-03.value  0.0
+
+# FET 5 - Fan / LED
+setp i2c_pwm.out-04.enable 1
+setp i2c_pwm.out-04.value  0.0
+
+# FET 6 - Fan / LED
+setp i2c_pwm.out-05.enable 1
+setp i2c_pwm.out-05.value  0.0
+
+# FET 7 - Fan / LED
+setp i2c_pwm.out-06.enable 1
+setp i2c_pwm.out-06.value  0.0
+
+# FET 8 - Fan / LED
+setp i2c_pwm.out-07.enable 1
+setp i2c_pwm.out-07.value 0.0
+
+# ##################################################
+# RGB LED
+# ##################################################
+newsig rgb_led.r   float
+newsig rgb_led.g   float
+newsig rgb_led.b   float
+newsig rgb_led.r_in u32
+newsig rgb_led.g_in u32
+newsig rgb_led.b_in u32
+
+net rgb_led.r => i2c_pwm.out-04.value
+net rgb_led.g => i2c_pwm.out-05.value
+net rgb_led.b => i2c_pwm.out-03.value
+
+net rgb_led.r <= led-dim.0.output
+net rgb_led.g <= led-dim.1.output
+net rgb_led.b <= led-dim.2.output
+
+net rgb_led.r_in <= ledctrl.color.r
+net rgb_led.r_in => led-dim.0.input
+net rgb_led.g_in <= ledctrl.color.g
+net rgb_led.g_in => led-dim.1.input
+net rgb_led.b_in <= ledctrl.color.b
+net rgb_led.b_in => led-dim.2.input
+
+setp led-dim.0.factor 5.0
+setp led-dim.0.steps  256
+setp led-dim.0.max-pwm 4095
+setp led-dim.1.factor 5.0
+setp led-dim.1.steps  256
+setp led-dim.1.max-pwm 4095
+setp led-dim.2.factor 5.0
+setp led-dim.2.steps  256
+setp led-dim.2.max-pwm 4095
+
+start
