@@ -18,7 +18,7 @@ loadusr -w ./setup.sh
 loadrt trivkins
 
 # motion controller, get name and thread periods from ini file
-loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=4 #[TRAJ]AXES
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 #[TRAJ]AXES
 # Gantry component for Z Axis
 loadrt gantry personality=2
 
@@ -28,6 +28,7 @@ loadrt [PRUCONF](DRIVER) [PRUCONF](CONFIG)
 loadrt pid num_chan=2
 loadrt limit1 count=2
 loadrt scale count=1
+loadrt led_dim count=3
 
 
 # Python user-mode HAL module to read ADC value and generate a thermostat output for PWM
@@ -50,6 +51,7 @@ loadusr -W haltalk --ini haltalk.ini
 # ################################################
 # THREADS
 # ################################################
+loadrt threads name1=run-thread period1=100000000
 
 addf [PRUCONF](DRIVER).capture-position   servo-thread
 addf bb_gpio.read                         servo-thread
@@ -64,6 +66,9 @@ addf bb_gpio.write                        servo-thread
 addf scale.0                              servo-thread
 addf gantry.0.read                        servo-thread
 addf gantry.0.write                       servo-thread
+addf led-dim.0.update   run-thread
+addf led-dim.1.update   run-thread
+addf led-dim.2.update   run-thread
 
 # wait the halcmd script until the UI has created the remote component 'pidctrl':
 # waitexists pidctrl
@@ -82,6 +87,16 @@ newpin pidctrl pidctrl.enable             bit out
 newpin pidctrl pidctrl.command            float out
 newpin pidctrl pidctrl.feedback           float in eps=0.01
 ready  pidctrl
+
+newcomp ledctrl timer=100 acceptdefaults
+newpin ledctrl ledctrl.color.r            u32 out
+newpin ledctrl ledctrl.color.g            u32 out
+newpin ledctrl ledctrl.color.b            u32 out
+newpin ledctrl ledctrl.color.a            u32 out
+newpin ledctrl ledctrl.color.h            float out
+newpin ledctrl ledctrl.color.s            float out
+newpin ledctrl ledctrl.color.v            float out
+ready  ledctrl
 
 # at this stage, the component and its pins exist
 # and can be linked to
@@ -490,14 +505,37 @@ setp pid.1.enable   1
 newsig rgb_led.r   float
 newsig rgb_led.g   float
 newsig rgb_led.b   float
+newsig rgb_led.r_in u32
+newsig rgb_led.g_in u32
+newsig rgb_led.b_in u32
 
 net rgb_led.r => i2c_pwm.out-04.value
 net rgb_led.g => i2c_pwm.out-05.value
 net rgb_led.b => i2c_pwm.out-03.value
 
-sets rgb_led.r 1.0
-sets rgb_led.g 1.0
-sets rgb_led.b 1.0
+net rgb_led.r <= led-dim.0.output
+net rgb_led.g <= led-dim.1.output
+net rgb_led.b <= led-dim.2.output
+
+#sets rgb_led.r 1.0
+#sets rgb_led.g 1.0
+#sets rgb_led.b 1.0
+net rgb_led.r_in <= ledctrl.color.r
+net rgb_led.r_in => led-dim.0.input
+net rgb_led.g_in <= ledctrl.color.g
+net rgb_led.g_in => led-dim.1.input
+net rgb_led.b_in <= ledctrl.color.b
+net rgb_led.b_in => led-dim.2.input
+
+setp led-dim.0.factor 5.0
+setp led-dim.0.steps  256
+setp led-dim.0.max-pwm 4095
+setp led-dim.1.factor 5.0
+setp led-dim.1.steps  256
+setp led-dim.1.max-pwm 4095
+setp led-dim.2.factor 5.0
+setp led-dim.2.steps  256
+setp led-dim.2.max-pwm 4095
 
 # ##################################################
 # Fans
@@ -512,6 +550,9 @@ net e0.fan.pwm => i2c_pwm.out-02.value
 
 setp scale.0.gain 0.00392156862745
 sets  e0.fan.set 0.0
+
+net e0.fan.set <= axis.4.motor-pos-cmd
+net e0.fan.set => axis.4.motor-pos-fb
 
 # FET 7 - Hotend Fan
 setp i2c_pwm.out-06.value  1.0
