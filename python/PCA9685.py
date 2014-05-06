@@ -124,6 +124,8 @@ class PCA9685:
         self.i2c.write_byte_data(self.address, self.__PCA9685_REG_MODE1, mode1Save) # restore settings
 
     def setPwmClock(self, clk):
+        clk=max(100,clk)
+        clk=min(1000,clk)
         prescaler = int(round(25E6/(4096*clk)-1))
         self.setPrescaler(prescaler)
 

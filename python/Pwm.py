@@ -48,6 +48,8 @@ for i in range(0, 16):
 
 # Initialize HAL
 h = hal.component(args.name)
+frequencyValue = 1000
+frequencyPin = h.newpin("frequency", hal.HAL_FLOAT, hal.HAL_IN)
 for pin in pins:
     pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_IN)
     pin.halEnablePin = h.newpin(getHalName(pin) + ".enable", hal.HAL_BIT, hal.HAL_IN)
@@ -55,6 +57,10 @@ h.ready()
 
 while (True):
     time.sleep(updateInterval)
+    
+    if (frequencyPin.value != frequencyValue):
+        frequencyValue = frequencyPin.value
+        pwm.setPwmClock(frequencyValue)
 
     for pin in pins:
         if (pin.halEnablePin.value != pin.enable):
