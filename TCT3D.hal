@@ -6,8 +6,8 @@
 #
 # ########################################
 
-# Launch the setup script to make sure hardware setup looks good
-loadusr -w ./setup.sh
+#load universal IO file
+loadusr -W config-pin paralell_cape3.bbio
 
 
 # ###################################
@@ -505,13 +505,14 @@ sets rgb_led.b 1.0
 newsig e0.fan.set   float
 newsig e0.fan.pwm   float
 
+setp scale.0.gain 0.00392156862745
+sets e0.fan.set 0.0
+
 # E0 Fan
 net e0.fan.set => scale.0.in
+net e0.fan.set <= motion.analog-out-00
 net e0.fan.pwm <= scale.0.out
 net e0.fan.pwm => i2c_pwm.out-02.value
-
-setp scale.0.gain 0.00392156862745
-sets  e0.fan.set 0.0
 
 # FET 7 - Hotend Fan
 setp i2c_pwm.out-06.value  1.0
