@@ -6,9 +6,8 @@
 #
 # ########################################
 
-#load universal IO file
-loadusr -W config-pin paralell_cape3.bbio
-
+# load universal IO file
+loadusr -w config-pin -f paralell_cape3.bbio
 
 # ###################################
 # Core EMC/HAL Loads
@@ -85,7 +84,7 @@ newpin pidctrl pidctrl.maxerrorI          float out
 newpin pidctrl pidctrl.bias               float out
 newpin pidctrl pidctrl.enable             bit out
 newpin pidctrl pidctrl.command            float out
-newpin pidctrl pidctrl.feedback           float in eps=0.01
+newpin pidctrl pidctrl.feedback           float in
 ready  pidctrl
 
 newcomp ledctrl timer=100 acceptdefaults
@@ -97,6 +96,10 @@ newpin ledctrl ledctrl.color.h            float out
 newpin ledctrl ledctrl.color.s            float out
 newpin ledctrl ledctrl.color.v            float out
 ready  ledctrl
+
+setp ledctrl.color.r 255
+setp ledctrl.color.g 255
+setp ledctrl.color.b 255
 
 # at this stage, the component and its pins exist
 # and can be linked to
@@ -196,6 +199,7 @@ sets emcmot.02.enable FALSE
 net emcmot.02.enable <= axis.2.amp-enable-out 
 net emcmot.02.enable => [PRUCONF](DRIVER).stepgen.02.enable
 
+setp gantry.0.search-vel                         [AXIS_2]HOME_SEARCH_VEL
 
 # position command and feedback
 net emcmot.02.pos-cmd <= axis.2.motor-pos-cmd
@@ -347,13 +351,16 @@ newsig limit-y-min bit
 newsig limit-y-max bit
 newsig limit-z-min bit
 newsig limit-z-max bit
+newsig home-z      bit
 
-net limit-x-min <= i2c_gpio.A.in-01
-net limit-x-max <= i2c_gpio.A.in-00
-net limit-y-min <= i2c_gpio.A.in-03
-net limit-y-max <= i2c_gpio.A.in-02
-net limit-z-min <= i2c_gpio.A.in-05
-net limit-z-max <= i2c_gpio.A.in-04
+net limit-x-min <= i2c_gpio.A.in-00
+net limit-x-max <= i2c_gpio.A.in-01
+net limit-y-min <= i2c_gpio.A.in-02
+net limit-y-max <= i2c_gpio.A.in-03
+net limit-z-min <= i2c_gpio.A.in-04
+net limit-z-max <= i2c_gpio.A.in-05
+
+net home-z      <= gantry.0.home
 
 # Adjust as needed for your switch polarity
 setp i2c_gpio.A.in-00.invert 1
@@ -368,8 +375,8 @@ setp i2c_gpio.A.in-00.pullup 1
 setp i2c_gpio.A.in-01.pullup 1
 setp i2c_gpio.A.in-02.pullup 1
 setp i2c_gpio.A.in-03.pullup 1
-setp i2c_gpio.A.in-04.pullup 1
-setp i2c_gpio.A.in-05.pullup 1
+setp i2c_gpio.A.in-04.pullup 0
+setp i2c_gpio.A.in-05.pullup 0
 
 # Uncomment if you actually have limit switches setup
 # You probably want to setup homing in the INI file, as well
@@ -380,8 +387,10 @@ net limit-y-min => axis.1.home-sw-in
 #net limit-y-min => axis.1.neg-lim-sw-in
 #net limit-y-max => axis.1.pos-lim-sw-in
 #net limit-z-min => gantry.0.joint.00.home
-#net gantry.0.limit => axis.2.home-sw-in
-net limit-z-min => axis.2.home-sw-in
+net  limit-z-min => gantry.0.joint.00.home
+net  limit-z-max => gantry.0.joint.01.home
+net  home-z      => axis.2.home-sw-in
+#net limit-z-min => axis.2.home-sw-in
 #net limit-z-min => axis.2.neg-lim-sw-in
 #net limit-z-max => axis.2.pos-lim-sw-in
 
@@ -513,13 +522,14 @@ net rgb_led.r => i2c_pwm.out-04.value
 net rgb_led.g => i2c_pwm.out-05.value
 net rgb_led.b => i2c_pwm.out-03.value
 
+#sets rgb_led.r_in 255
+#sets rgb_led.g_in 255
+#sets rgb_led.b_in 255
+
 net rgb_led.r <= led-dim.0.output
 net rgb_led.g <= led-dim.1.output
 net rgb_led.b <= led-dim.2.output
 
-#sets rgb_led.r 1.0
-#sets rgb_led.g 1.0
-#sets rgb_led.b 1.0
 net rgb_led.r_in <= ledctrl.color.r
 net rgb_led.r_in => led-dim.0.input
 net rgb_led.g_in <= ledctrl.color.g
@@ -553,7 +563,7 @@ net e0.fan.pwm <= scale.0.out
 net e0.fan.pwm => i2c_pwm.out-02.value
 
 setp scale.0.gain 0.00392156862745
-sets  e0.fan.set 0.0
+#sets  e0.fan.set 0.0
 
 #net e0.fan.set <= axis.4.motor-pos-cmd
 #net e0.fan.set => axis.4.motor-pos-fb
