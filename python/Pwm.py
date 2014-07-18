@@ -15,7 +15,7 @@ import hal
 
 
 class Pin:
-    def _init_(self):
+    def __init__(self):
         self.enable = False
         self.value = 0.0
         self.pin = 0
