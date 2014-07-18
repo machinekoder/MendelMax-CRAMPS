@@ -6,9 +6,6 @@
 #
 # ########################################
 
-# load universal IO file
-loadusr -w config-pin -f paralell_cape3.bbio
-
 # start haltalk server
 loadusr -W haltalk --ini haltalk.ini
 
@@ -20,13 +17,13 @@ loadusr -W haltalk --ini haltalk.ini
 loadrt trivkins
 
 # motion controller, get name and thread periods from ini file
-loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=5 #[TRAJ]AXES
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=6 #[TRAJ]AXES
 # Gantry component for Z Axis
 loadrt gantry personality=2
 
 # load low-level drivers
 loadrt hal_bb_gpio output_pins=107,119,126 input_pins=241
-loadrt [PRUCONF](DRIVER) [PRUCONF](CONFIG)
+loadrt [PRUCONF](DRIVER) prucode=$(LINUXCNC_HOME)/[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
 loadrt pid num_chan=2
 loadrt limit1 count=2
 loadrt scale count=1
@@ -42,7 +39,7 @@ loadrt invert count=1
 loadrt mux4 count=1
 loadrt oneshot count=1
 loadrt ddt count=1
-loadrt lincurve count=1 personality=2
+loadrt lincurve count=1 personality=3
 
 # Python user-mode HAL module to interface with an I2C gpio extender
 loadusr -Wn i2c_gpio ./python/Gpio.py --name i2c_gpio --bus_id 2 --address 32 --interval 0.05 --input_pins A00,A01,A02,A03,A04,A05
@@ -51,7 +48,7 @@ loadusr -Wn i2c_gpio ./python/Gpio.py --name i2c_gpio --bus_id 2 --address 32 --
 loadusr -Wn i2c_pwm ./python/Pwm.py --name i2c_pwm --bus_id 2 --address 70 --interval 0.05
 
 # Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
-loadusr -Wn i2c_temp ./python/Temperature.py --name i2c_temp --bus_id 2 --address 72 --interval 0.05 --filter_size 20 --channels 00:epcos_B57560G1104,02:artifex_hb
+loadusr -Wn i2c_temp ./python/Temperature.py --name i2c_temp --bus_id 2 --address 72 --interval 0.05 --filter_size 20 --channels 01:epcos_B57560G1104,03:artifex_hb
 
 # ################################################
 # THREADS
@@ -313,7 +310,6 @@ net emcmot.03.enable => [PRUCONF](DRIVER).stepgen.04.enable
 #here i pass the value of the analog output from M67 E1 Q.. or M68 E1 Q.. to the multiplicator
 net line-width motion.analog-out-02 => mult2.0.in0
 net line-height motion.analog-out-03 => mult2.0.in1
-
 net line-cross-section mult2.0.out => mult2.1.in1
 
 #take all the actual speeds from the axes and calculate resulting speed.
@@ -325,7 +321,7 @@ net zvel axis.2.joint-vel-cmd => abs.2.in
 net zvel-abs abs.2.out => hypot.0.in2
 
 #multiply area with speed and we get discharge (mm^3 per second)
-net nozzle-vel hypot.0.out => mult2.1.in0
+net nozzle-vel-cartesian hypot.0.out => mult2.1.in0
 net nozzle-discharge mult2.1.out => mult2.2.in0
 
 #calaulate filament cross section area
@@ -375,10 +371,12 @@ net current-motion-type motion.current-motion
 
 # these are used for a small offset in velocity during acceleration (buildup pressure inside
 # the nozzle because of the current speed. Take the maximum accel you've specified in .ini
-setp lincurve.0.x-val-00 -3000
-setp lincurve.0.x-val-01 3000
-setp lincurve.0.y-val-00 -360
-setp lincurve.0.y-val-01 360
+setp lincurve.0.x-val-00 -3500
+setp lincurve.0.x-val-01 0
+setp lincurve.0.x-val-02 3000
+setp lincurve.0.y-val-00 -3500
+setp lincurve.0.y-val-01 0
+setp lincurve.0.y-val-02 3500
 
 # get the extruder speed into sum2.4 and ddt
 net extruder-speed mux4.0.out sum2.4.in0 ddt.0.in
@@ -559,7 +557,7 @@ newsig bed.temp.pwm              float
 # Extruder 0 temperature control
 # --------------------------------------------------------------------------
 # Machine dependent
-net e0.temp.meas   <= i2c_temp.ch-00.value
+net e0.temp.meas   <= i2c_temp.ch-01.value
 net e0.heaterl     => i2c_pwm.out-01.value
 
 # PID parameters
@@ -608,7 +606,7 @@ sets e0.temp.range.neg_error -0.5
 # Bed temperature control
 # ----------------------------------------------------------------------------
 # Machine dependent
-net bed.temp.meas    <= i2c_temp.ch-02.value
+net bed.temp.meas    <= i2c_temp.ch-03.value
 net bed.heaterl => i2c_pwm.out-00.value
 
 # PID parameters
@@ -646,8 +644,9 @@ net bed.temp.meas                 => wcomp.1.in
 #this needs to be coupled to a digital input for M66 readout
 net bed.temp.in_range wcomp.1.out => motion.digital-in-01
 
+net bed.temp.set <= motion.analog-out-05
 # Parameters
-sets bed.temp.set  0
+#sets bed.temp.set  0
 sets bed.temp.range.pos_error 2.0
 sets bed.temp.range.neg_error 2.0
 
@@ -672,9 +671,9 @@ newsig rgb_led.r_in u32
 newsig rgb_led.g_in u32
 newsig rgb_led.b_in u32
 
-net rgb_led.r => i2c_pwm.out-04.value
-net rgb_led.g => i2c_pwm.out-05.value
-net rgb_led.b => i2c_pwm.out-03.value
+#net rgb_led.r => i2c_pwm.out-04.value
+#net rgb_led.g => i2c_pwm.out-05.value
+#net rgb_led.b => i2c_pwm.out-03.value
 
 net rgb_led.r <= led-dim.0.output
 net rgb_led.g <= led-dim.1.output
@@ -705,7 +704,7 @@ newsig e0.fan.pwm   float
 
 # E0 Fan
 # -------
-net e0.fan.pwm => i2c_pwm.out-02.value
+net e0.fan.pwm => i2c_pwm.out-03.value
 
 setp scale.0.gain 0.00392156862745
 net e0.fan.set => scale.0.in
@@ -714,8 +713,8 @@ net e0.fan.pwm <= scale.0.out
 
 # Hotend Fan
 # -----------
-setp i2c_pwm.out-06.value  1.0
+setp i2c_pwm.out-04.value  1.0
 
-# Housing Fan
+# Hotend lights
 # ------------
-setp i2c_pwm.out-07.value  1.0
+setp i2c_pwm.out-06.value  1.0
