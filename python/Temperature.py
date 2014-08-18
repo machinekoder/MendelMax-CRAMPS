@@ -18,7 +18,7 @@ import hal
 class Pin:
     def __init__(self):
         self.pin = 0
-        self.r2temp = 0
+        self.r2temp = None
         self.halValuePin = 0
         self.halRawPin = 0
         self.filterSamples = []
@@ -78,7 +78,8 @@ if (args.channels != ""):
         if ((pin.pin > 7) or (pin.pin < 0)):
             print(("Pin not available"))
             exit()
-        pin.r2temp = R2Temp(pinRaw[1])
+        if (pinRaw[1] != "none"):
+            pin.r2temp = R2Temp(pinRaw[1])
         pin.filterSize = filterSize
         pins.append(pin)
 
@@ -86,7 +87,8 @@ if (args.channels != ""):
 h = hal.component(args.name)
 for pin in pins:
     pin.halRawPin = h.newpin(getHalName(pin) + ".raw", hal.HAL_FLOAT, hal.HAL_OUT)
-    pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_OUT)
+    if (pin.r2temp is not None):
+        pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_OUT)
 h.ready()
 
 while (True):
@@ -95,4 +97,5 @@ while (True):
         value = float(adc.readChannel(pin.pin))
         pin.addSample(value)
         pin.halRawPin.value = pin.rawValue
-        pin.halValuePin.value = adc2Temp(pin)
+        if (pin.r2temp is not None):
+            pin.halValuePin.value = adc2Temp(pin)
