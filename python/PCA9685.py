@@ -67,8 +67,6 @@ class PCA9685:
         self.i2c = smbus.SMBus(busId)
         self.address = address
         self.debug = debug
-        
-        self.init()
 
     def init(self):
         config = 0

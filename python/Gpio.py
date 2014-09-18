@@ -74,9 +74,11 @@ args = parser.parse_args()
 updateInterval = float(args.interval)
 error = False
 
+
+gpio = MCP23017(busId=int(args.bus_id),
+                address=int(args.address))
 try:
-    gpio = MCP23017(busId=int(args.bus_id),
-                    address=int(args.address))
+    gpio.init()
 except IOError as e:
     error = True    # if init fails it will be on default values after powerup
 

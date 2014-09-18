@@ -41,9 +41,11 @@ args = parser.parse_args()
 updateInterval = float(args.interval)
 error = False
 
+
+pwm = PCA9685(busId=int(args.bus_id),
+                address=int(args.address))
 try:
-    pwm = PCA9685(busId=int(args.bus_id),
-                    address=int(args.address))
+    pwm.init()
 except IOError as e:
     error = True    # if init fails it will be on default values after powerup
 
