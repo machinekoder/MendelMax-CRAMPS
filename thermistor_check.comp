@@ -3,7 +3,7 @@
  * Copyright (C) 2014 Alexander Rössler
  *
  *
- * This module allows dimming LEDs using HAL
+ * This module checks the functionality of thermistors
  *
  ******************************************************************************
  *
@@ -37,14 +37,10 @@
  ******************************************************************************/
 
 component thermistor_check "LinuxCNC HAL component for checking functionality of thermistors";
-pin in  u32   steps "Input steps";
-pin in  u32   max_pwm "PWM steps (usually 2^n)";
-pin in  float factor "The dim factor";
-
 pin in  float   temp      "Temperature input";
-pin in  float   temp_min  "The minimum temperature change that should count"
+pin in  float   min_temp  "The minimum temperature change that should count";
 pin in  float   pid       "Output of PID control";
-pin in  float   pid_min   "The minimum PID control output to react to";
+pin in  float   min_pid   "The minimum PID control output to react to";
 pin in  u32     wait      "The number of cycle to wait before triggering an error";
 pin in  bit     enable    "Enables or disables the component, out is TRUE when disabled";
 pin out bit     out       "Output value -> TRUE when the thermistor works as exspected";
@@ -60,31 +56,38 @@ variable u32 count = 0;
 variable float last_temp = 0.0;
 ;;
 FUNCTION(_) {
-    bit active;
+    bool active;
     float temp_change;
 
-    if ((enable) && (id => pid_min))
+    if ((enable) && (pid >= min_pid))
     {
-        temp_change = temp - last_temp;
-        last_temp = temp;
+        count++;
 
-        if (temp_change => temp_min)
+        if (count == 1)
+        {
+            last_temp = temp;
+        }
+        else if (count == wait)
         {
             count = 0;
-        }
-        else
-        {
-            count++;
-        }
+            temp_change = temp - last_temp;
 
-        if (count > wait)
-        {
-            out = 0;
-            error = 1;
+            if (temp_change >= min_temp)    // correct
+            {
+
+                out = 1;
+                error = 0;
+            }
+            else
+            {
+                out = 0;
+                error = 1;
+            }
         }
     }
     else
     {
+        count = 0;
         out = 1;
         error = 0;
     }

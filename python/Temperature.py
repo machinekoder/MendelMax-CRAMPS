@@ -63,6 +63,8 @@ filterSize = int(args.filter_size)
 adc = ADS7828(busId=int(args.bus_id),
                 address=int(args.address))
 
+error = False
+
 # Create pins
 pins = []
 
@@ -89,13 +91,21 @@ for pin in pins:
     pin.halRawPin = h.newpin(getHalName(pin) + ".raw", hal.HAL_FLOAT, hal.HAL_OUT)
     if (pin.r2temp is not None):
         pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_OUT)
+halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
+halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
 while (True):
+    try:
+        for pin in pins:
+            value = float(adc.readChannel(pin.pin))
+            pin.addSample(value)
+            pin.halRawPin.value = pin.rawValue
+            if (pin.r2temp is not None):
+                pin.halValuePin.value = adc2Temp(pin)
+        error = False
+    except IOError as e:
+        error = True
+    halErrorPin.value = error
+    halNoErrorPin.value = not error
     time.sleep(updateInterval)
-    for pin in pins:
-        value = float(adc.readChannel(pin.pin))
-        pin.addSample(value)
-        pin.halRawPin.value = pin.rawValue
-        if (pin.r2temp is not None):
-            pin.halValuePin.value = adc2Temp(pin)

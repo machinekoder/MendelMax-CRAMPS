@@ -24,6 +24,11 @@ class Pin:
         self.halPullupPin = 0
         self.halInvertedPin = 0
 
+    def reset(self):
+        self.port = MCP23017.PORT_A
+        self.direction = MCP23017.DIR_IN
+        self.pullup = MCP23017.PULLUP_DIS
+
 
 def parseInputPin(pinRaw, direction):
     if (len(pinRaw) != 3):
@@ -67,9 +72,13 @@ parser.add_argument('-ip', '--input_pins', help='Komma separated list of input p
 args = parser.parse_args()
 
 updateInterval = float(args.interval)
+error = False
 
-gpio = MCP23017(busId=int(args.bus_id),
-                address=int(args.address))
+try:
+    gpio = MCP23017(busId=int(args.bus_id),
+                    address=int(args.address))
+except IOError as e:
+    error = True    # if init fails it will be on default values after powerup
 
 # Parse arguments
 pins = []
@@ -101,6 +110,8 @@ for pin in pins:
     else:
         pin.halPin = h.newpin(getHalName(pin), hal.HAL_BIT, hal.HAL_IN)
         pin.halPullupPin = h.newpin(getHalName(pin) + ".pullup", hal.HAL_BIT, hal.HAL_IN)
+halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
+halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
 for pin in pins:
@@ -108,16 +119,27 @@ for pin in pins:
         h[getHalName(pin)] = False
 
 while (True):
-    time.sleep(updateInterval)
+    try:
+        if (error):
+            gpio.init()
+            for pin in pins:
+                pin.reset()
+            error = False
 
-    gpio.update()
-    for pin in pins:
-        if (pin.direction == MCP23017.DIR_IN):
-            pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
-        else:
-            gpio.setValue(pin.port, pin.pin, pin.halPin.value())
-        pullup = pin.halPullupPin.value
-        if (pullup):
-            gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
-        else:
-            gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_DIS)
+        gpio.update()  # read
+        for pin in pins:
+            if (pin.direction == MCP23017.DIR_IN):
+                pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
+            else:
+                gpio.setValue(pin.port, pin.pin, pin.halPin.value())
+            pullup = pin.halPullupPin.value
+            if (pullup):
+                gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
+            else:
+                gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_DIS)
+        gpio.update()  # write
+    except IOError as e:
+        error = True
+    halErrorPin.value = error
+    halNoErrorPin.value = not error
+    time.sleep(updateInterval)

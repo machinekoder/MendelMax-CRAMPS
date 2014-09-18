@@ -68,7 +68,10 @@ class MCP23017:
         self.i2c = smbus.SMBus(busId)
         self.address = address
         self.debug = debug
+        
+        self.init()
 
+    def init(self):
         config = 0
         config |= self.__MCP23017_IOCON_BANK1
         config |= self.__MCP23017_IOCON_MIRROR_DIS

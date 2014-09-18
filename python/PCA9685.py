@@ -67,7 +67,10 @@ class PCA9685:
         self.i2c = smbus.SMBus(busId)
         self.address = address
         self.debug = debug
+        
+        self.init()
 
+    def init(self):
         config = 0
         config |= self.__PCA9685_MODE1_RESTART_DISABLED
         config |= self.__PCA9685_MODE1_EXTCLK_DISABLED
