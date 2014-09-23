@@ -24,11 +24,6 @@ class Pin:
         self.halPullupPin = 0
         self.halInvertedPin = 0
 
-    def reset(self):
-        self.port = MCP23017.PORT_A
-        self.direction = MCP23017.DIR_IN
-        self.pullup = MCP23017.PULLUP_DIS
-
 
 def parseInputPin(pinRaw, direction):
     if (len(pinRaw) != 3):
@@ -124,11 +119,9 @@ while (True):
     try:
         if (error):
             gpio.init()
-            for pin in pins:
-                pin.reset()
             error = False
 
-        gpio.update()  # read
+        gpio.read()  # read
         for pin in pins:
             if (pin.direction == MCP23017.DIR_IN):
                 pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
@@ -139,7 +132,7 @@ while (True):
                 gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
             else:
                 gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_DIS)
-        gpio.update()  # write
+        gpio.write()  # write
     except IOError as e:
         error = True
     halErrorPin.value = error

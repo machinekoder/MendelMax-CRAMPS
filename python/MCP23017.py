@@ -1,14 +1,16 @@
 #!/usr/bin/python
 
-import time
 import smbus
 
 
 class Port:
     def __init__(self):
-        self.value = 0
+        self.reset()
+
+    def reset(self):
+        self.value = 0x00
         self.dir = 0xFF
-        self.pullup = 0
+        self.pullup = 0x00
 
 
 class MCP23017:
@@ -85,6 +87,12 @@ class MCP23017:
             reg = self.portBase[i] + self.__MCP23017_REG_OLAT
             self.i2c.write_byte_data(self.address, reg, 0xFF)
 
+            self.port[i].reset()
+            self.portOld[i].reset()
+            self.updateDir(i, self.port[i].dir)
+            self.updatePullup(i, self.port[i].pullup)
+            self.updateValue(i, self.port[i].value)
+
     def setDir(self, port, pin, dir):
         newDir = self.port[port].dir
         newDir &= ~(1 << pin)
@@ -110,28 +118,33 @@ class MCP23017:
         reg = self.portBase[port] + self.__MCP23017_REG_GPIO
         self.i2c.write_byte_data(self.address, reg, value)
         if (self.debug):
-            print(("wrote value: " + str(value)))
+            print(("wrote value: " + "{0:b}".format(value)))
 
     def updateDir(self, port, dir):
         reg = self.portBase[port] + self.__MCP23017_REG_IODIR
         self.i2c.write_byte_data(self.address, reg, dir)
         if (self.debug):
-            print(("wrote dir value: " + str(dir)))
+            print(("wrote dir value: " + "{0:b}".format(dir)))
 
     def updatePullup(self, port, pullup):
         reg = self.portBase[port] + self.__MCP23017_REG_GPPU
         self.i2c.write_byte_data(self.address, reg, pullup)
         if (self.debug):
-            print(("wrote pullup value: " + str(pullup)))
+            print(("wrote pullup value: " + "{0:b}".format(pullup)))
 
     def readValues(self, port):
         reg = self.portBase[port] + self.__MCP23017_REG_GPIO
         values = self.i2c.read_byte_data(self.address, reg)
         if (self.debug):
-            print(("read values: " + str(values)))
+            print(("read values: " + "{0:b}".format(values)))
         return values
 
-    def update(self):
+    def read(self):
+        for i in range(0, 1):
+            self.port[i].value = self.readValues(i)
+            self.portOld[i].value = self.port[i].value
+
+    def write(self):
         for i in range(0, 1):
             if (self.port[i].dir != self.portOld[i].dir):
                 self.updateDir(i, self.port[i].dir)
@@ -143,9 +156,6 @@ class MCP23017:
 
             if (self.port[i].value != self.portOld[i].value):
                 self.updateValue(i, self.port[i].value)
-
-            self.port[i].value = self.readValues(i)
-            self.portOld[i].value = self.port[i].value
 
 
 #gpio = MCP23017(0x20, 2, True)

@@ -61,6 +61,7 @@ for i in range(0, 16):
 h = hal.component(args.name)
 frequencyValue = 1000
 frequencyPin = h.newpin("frequency", hal.HAL_FLOAT, hal.HAL_IN)
+frequencyPin.value = 1000
 for pin in pins:
     pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_IN)
     pin.halEnablePin = h.newpin(getHalName(pin) + ".enable", hal.HAL_BIT, hal.HAL_IN)
@@ -69,6 +70,7 @@ halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
 while (True):
+    updatePin = 0
     try:
         if (error):
             pwm.init()
@@ -76,22 +78,41 @@ while (True):
                 pin.reset()
             error = False
 
+        updated = False
+
         if (frequencyPin.value != frequencyValue):
             pwm.setPwmClock(frequencyValue)
             frequencyValue = frequencyPin.value
+            updated = True
 
         for pin in pins:
-            if (pin.halEnablePin.value != pin.enable):
-                if (pin.halEnablePin.value):
-                    pwm.setPwmDuty(pin.pin, pin.value)
-                    pin.value = pin.halValuePin.value
+            value = pin.halValuePin.value
+            enable = pin.halEnablePin.value
+            if (enable != pin.enable):
+                if (enable):
+                    pwm.setPwmDuty(pin.pin, value)
+                    pin.value = value
                 else:
                     pwm.setPwmDuty(pin.pin, 0.0)
-                pin.enable = pin.halEnablePin.value
+                pin.enable = enable
+                updated = True
+            elif (value != pin.value):
+                if (pin.enable):
+                    pwm.setPwmDuty(pin.pin, value)
+                    updated = True
+                pin.value = value
 
-            elif (pin.halValuePin.value != pin.value):
+        if not updated:
+            pin = pins[updatePin]
+            if (pin.enable):
                 pwm.setPwmDuty(pin.pin, pin.value)
-                pin.value = pin.halValuePin.value
+            else:
+                pwm.setPwmDuty(pin.pin, 0.0)
+            if updatePin < (len(pins) - 1):
+                updatePin += 1
+            else:
+                updatePin = 0
+
     except IOError as e:
         error = True
     halErrorPin.value = error
