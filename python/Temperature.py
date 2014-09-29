@@ -54,16 +54,17 @@ parser.add_argument('-a', '--address', help='I2C device address', default=0x20)
 parser.add_argument('-i', '--interval', help='I2C update interval', default=0.05)
 parser.add_argument('-c', '--channels', help='Komma separated list of channels and thermistors to use e.g. 01:semitec_103GT_2,02:epcos_B57560G1104', required=True)
 parser.add_argument('-f', '--filter_size', help='Size of the low pass filter to use', default=10)
+parser.add_argument('-d', '--delay', help='Delay before the i2c should be updated', default=0.0)
 
 args = parser.parse_args()
 
 updateInterval = float(args.interval)
+delayInterval = float(args.delay)
 filterSize = int(args.filter_size)
+error = True
 
 adc = ADS7828(busId=int(args.bus_id),
                 address=int(args.address))
-
-error = False
 
 # Create pins
 pins = []
@@ -95,17 +96,26 @@ halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
 halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
-while (True):
-    try:
-        for pin in pins:
-            value = float(adc.readChannel(pin.pin))
-            pin.addSample(value)
-            pin.halRawPin.value = pin.rawValue
-            if (pin.r2temp is not None):
-                pin.halValuePin.value = adc2Temp(pin)
-        error = False
-    except IOError as e:
-        error = True
-    halErrorPin.value = error
-    halNoErrorPin.value = not error
-    time.sleep(updateInterval)
+halErrorPin.value = error
+halNoErrorPin.value = not error
+
+try:
+    time.sleep(delayInterval)
+    while (True):
+        try:
+            for pin in pins:
+                value = float(adc.readChannel(pin.pin))
+                pin.addSample(value)
+                pin.halRawPin.value = pin.rawValue
+                if (pin.r2temp is not None):
+                    pin.halValuePin.value = adc2Temp(pin)
+            error = False
+        except IOError as e:
+            error = True
+
+        halErrorPin.value = error
+        halNoErrorPin.value = not error
+        time.sleep(updateInterval)
+except:
+    print("exiting HAL component " + args.name)
+    h.exit()

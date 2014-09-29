@@ -64,18 +64,15 @@ parser.add_argument('-a', '--address', help='I2C device address', default=0x20)
 parser.add_argument('-i', '--interval', help='I2C update interval', default=0.05)
 parser.add_argument('-op', '--output_pins', help='Komma separated list of output pins e.g. A01,B02', default="")
 parser.add_argument('-ip', '--input_pins', help='Komma separated list of input pins e.g. A01,B02', default="")
+parser.add_argument('-d', '--delay', help='Delay before the i2c should be updated', default=0.0)
 args = parser.parse_args()
 
 updateInterval = float(args.interval)
-error = False
-
+delayInterval = float(args.delay)
+error = True
 
 gpio = MCP23017(busId=int(args.bus_id),
                 address=int(args.address))
-try:
-    gpio.init()
-except IOError as e:
-    error = True    # if init fails it will be on default values after powerup
 
 # Parse arguments
 pins = []
@@ -111,30 +108,35 @@ halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
 halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
-for pin in pins:
-    if (pin.direction == MCP23017.DIR_IN):
-        h[getHalName(pin)] = False
+halErrorPin.value = error
+halNoErrorPin.value = not error
 
-while (True):
-    try:
-        if (error):
-            gpio.init()
-            error = False
+try:
+    time.sleep(delayInterval)
+    while (True):
+        try:
+            if (error):
+                gpio.init()
+                error = False
 
-        gpio.read()  # read
-        for pin in pins:
-            if (pin.direction == MCP23017.DIR_IN):
-                pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
-            else:
-                gpio.setValue(pin.port, pin.pin, pin.halPin.value())
-            pullup = pin.halPullupPin.value
-            if (pullup):
-                gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
-            else:
-                gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_DIS)
-        gpio.write()  # write
-    except IOError as e:
-        error = True
-    halErrorPin.value = error
-    halNoErrorPin.value = not error
-    time.sleep(updateInterval)
+            gpio.read()  # read
+            for pin in pins:
+                if (pin.direction == MCP23017.DIR_IN):
+                    pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
+                else:
+                    gpio.setValue(pin.port, pin.pin, pin.halPin.value())
+                pullup = pin.halPullupPin.value
+                if (pullup):
+                    gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
+                else:
+                    gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_DIS)
+            gpio.write()  # write
+        except IOError as e:
+            error = True
+
+        halErrorPin.value = error
+        halNoErrorPin.value = not error
+        time.sleep(updateInterval)
+except:
+    print("exiting HAL component " + args.name)
+    h.exit()

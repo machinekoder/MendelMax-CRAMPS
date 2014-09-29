@@ -36,18 +36,15 @@ parser.add_argument('-n', '--name', help='HAL component name', required=True)
 parser.add_argument('-b', '--bus_id', help='I2C bus id', default=2)
 parser.add_argument('-a', '--address', help='I2C device address', default=0x20)
 parser.add_argument('-i', '--interval', help='I2C update interval', default=0.05)
+parser.add_argument('-d', '--delay', help='Delay before the i2c should be updated', default=0.0)
 args = parser.parse_args()
 
 updateInterval = float(args.interval)
-error = False
-
+delayInterval = float(args.delay)
+error = True
 
 pwm = PCA9685(busId=int(args.bus_id),
                 address=int(args.address))
-try:
-    pwm.init()
-except IOError as e:
-    error = True    # if init fails it will be on default values after powerup
 
 # Create pins
 pins = []
@@ -69,52 +66,60 @@ halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
 halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
-while (True):
-    updatePin = 0
-    try:
-        if (error):
-            pwm.init()
+halErrorPin.value = error
+halNoErrorPin.value = not error
+
+try:
+    time.sleep(delayInterval)
+    while (True):
+        updatePin = 0
+        try:
+            if (error):
+                pwm.init()
+                for pin in pins:
+                    pin.reset()
+                error = False
+
+            updated = False
+
+            if (frequencyPin.value != frequencyValue):
+                pwm.setPwmClock(frequencyValue)
+                frequencyValue = frequencyPin.value
+                updated = True
+
             for pin in pins:
-                pin.reset()
-            error = False
-
-        updated = False
-
-        if (frequencyPin.value != frequencyValue):
-            pwm.setPwmClock(frequencyValue)
-            frequencyValue = frequencyPin.value
-            updated = True
-
-        for pin in pins:
-            value = pin.halValuePin.value
-            enable = pin.halEnablePin.value
-            if (enable != pin.enable):
-                if (enable):
-                    pwm.setPwmDuty(pin.pin, value)
+                value = pin.halValuePin.value
+                enable = pin.halEnablePin.value
+                if (enable != pin.enable):
+                    if (enable):
+                        pwm.setPwmDuty(pin.pin, value)
+                        pin.value = value
+                    else:
+                        pwm.setPwmDuty(pin.pin, 0.0)
+                    pin.enable = enable
+                    updated = True
+                elif (value != pin.value):
+                    if (pin.enable):
+                        pwm.setPwmDuty(pin.pin, value)
+                        updated = True
                     pin.value = value
+
+            if not updated:
+                pin = pins[updatePin]
+                if (pin.enable):
+                    pwm.setPwmDuty(pin.pin, pin.value)
                 else:
                     pwm.setPwmDuty(pin.pin, 0.0)
-                pin.enable = enable
-                updated = True
-            elif (value != pin.value):
-                if (pin.enable):
-                    pwm.setPwmDuty(pin.pin, value)
-                    updated = True
-                pin.value = value
+                if updatePin < (len(pins) - 1):
+                    updatePin += 1
+                else:
+                    updatePin = 0
+        except IOError as e:
+            error = True
 
-        if not updated:
-            pin = pins[updatePin]
-            if (pin.enable):
-                pwm.setPwmDuty(pin.pin, pin.value)
-            else:
-                pwm.setPwmDuty(pin.pin, 0.0)
-            if updatePin < (len(pins) - 1):
-                updatePin += 1
-            else:
-                updatePin = 0
-
-    except IOError as e:
-        error = True
-    halErrorPin.value = error
-    halNoErrorPin.value = not error
-    time.sleep(updateInterval)
+        halErrorPin.value = error
+        halNoErrorPin.value = not error
+        time.sleep(updateInterval)
+except:
+    print("exiting HAL component " + args.name)
+    h.exit()

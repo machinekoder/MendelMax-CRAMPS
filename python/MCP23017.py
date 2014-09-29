@@ -156,6 +156,7 @@ class MCP23017:
 
             if (self.port[i].value != self.portOld[i].value):
                 self.updateValue(i, self.port[i].value)
+                self.portOld[i].value = self.port[i].value
 
 
 #gpio = MCP23017(0x20, 2, True)
