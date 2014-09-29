@@ -1,0 +1,946 @@
+# #######################################
+#
+# HAL file for BeagleBone + TCT paralell port cape with 5 steppers and 3D printer board
+#
+# Derived from example hm2-stepper config
+#
+# ########################################
+
+# start haltalk server
+loadusr -W haltalk --ini haltalk.ini
+
+# ###################################
+# Core EMC/HAL Loads
+# ###################################
+
+# kinematics
+loadrt trivkins
+
+# motion controller, get name and thread periods from ini file
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=6 #[TRAJ]AXES
+
+# THREADS
+loadrt threads name1=run-thread name2=check-thread period1=50170000 period2=300000000
+
+# Gantry component for Z Axis
+loadrt gantry names=gantry.z personality=2
+
+# load low-level drivers
+loadrt hal_bb_gpio output_pins=107,119,126,226 input_pins=241
+
+loadrt [PRUCONF](DRIVER) prucode=$(LINUXCNC_HOME)/[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
+
+loadrt pid names=pid.e0-temp,pid.bed-temp
+
+loadrt limit1 names=limit1.e0-heater,limit1.bed-heater
+
+addf   [PRUCONF](DRIVER).capture-position   servo-thread
+addf   bb_gpio.read                         servo-thread
+addf   gantry.z.read                        servo-thread
+addf   motion-command-handler               servo-thread
+addf   motion-controller                    servo-thread
+addf   pid.e0-temp.do-pid-calcs             servo-thread
+addf   pid.bed-temp.do-pid-calcs            servo-thread
+addf   limit1.e0-heater                     servo-thread
+addf   limit1.bed-heater                    servo-thread
+addf   gantry.z.write                       servo-thread
+addf   [PRUCONF](DRIVER).update             servo-thread
+addf   bb_gpio.write                        servo-thread
+
+
+loadrt scale names=scale.e0-fan
+addf   scale.e0-fan                         servo-thread
+
+loadrt led_dim names=led-dim.led-r,led-dim.led-g,led-dim.led-b
+#addf led-dim.led-r.update                     run-thread
+#addf led-dim.led-g.update                     run-thread
+#addf led-dim.led-b.update                     run-thread
+
+loadrt charge_pump
+addf   charge-pump                          run-thread
+
+loadrt thermistor_check names=thermistor-check.e0,thermistor-check.bed
+addf   thermistor-check.e0                  check-thread
+addf   thermistor-check.bed                 check-thread
+
+loadrt not names=not.e0-temp-range,not.bed-temp-range
+addf   not.e0-temp-range                    servo-thread
+addf   not.bed-temp-range                   servo-thread
+
+loadrt wcomp names=wcomp.e0-temp-range,wcomp.bed-temp-range,wcomp.e0-temp-limit,wcomp.bed-temp-limit
+addf   wcomp.e0-temp-range                  servo-thread
+addf   wcomp.bed-temp-range                 servo-thread
+addf   wcomp.e0-temp-limit                  servo-thread
+addf   wcomp.bed-temp-limit                 servo-thread
+
+loadrt lowpass names=lowpass.e0-temp-range,lowpass.bed-temp-range
+addf   lowpass.e0-temp-range                servo-thread
+addf   lowpass.bed-temp-range               servo-thread
+
+loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.bed-temp-range-neg,sum2.bed-temp-range-pos,sum2.ve-speed
+addf   sum2.e0-temp-range-neg               servo-thread
+addf   sum2.e0-temp-range-pos               servo-thread
+addf   sum2.bed-temp-range-neg              servo-thread
+addf   sum2.bed-temp-range-pos              servo-thread
+addf   sum2.ve-speed                        servo-thread
+
+loadrt mult2 names=mult2.ve-line-cross,mult2.ve-nozzle-discharge,mult2.ve-extrude-rate,mult2.ve-filament-area,mult2.ve-diameter-squared
+addf   mult2.ve-line-cross                  servo-thread
+addf   mult2.ve-nozzle-discharge            servo-thread
+addf   mult2.ve-extrude-rate                servo-thread
+addf   mult2.ve-filament-area               servo-thread
+addf   mult2.ve-diameter-squared            servo-thread
+
+loadrt abs names=abs.ve-xvel,abs.ve-yvel,abs.ve-zvel
+addf   abs.ve-xvel                          servo-thread
+addf   abs.ve-yvel                          servo-thread
+addf   abs.ve-zvel                          servo-thread
+
+loadrt hypot names=hypot.ve-nozzle-vel
+addf   hypot.ve-nozzle-vel                  servo-thread
+
+loadrt invert names=invert.ve-filament-area
+addf   invert.ve-filament-area              servo-thread
+
+loadrt mux4 names=mux4.ve-extruder-speed
+addf   mux4.ve-extruder-speed               servo-thread
+
+loadrt oneshot names=oneshot.ve-retract-wait
+addf   oneshot.ve-retract-wait              servo-thread
+
+loadrt ddt names=ddt.ve-extruder-accel
+addf   ddt.ve-extruder-accel                servo-thread
+
+loadrt lincurve names=lincurve.ve-speed-adjustment personality=3
+addf   lincurve.ve-speed-adjustment         servo-thread
+
+# probe input
+loadrt and2 names=and2.probe
+addf   and2.probe                           servo-thread
+
+# control from HAL
+loadrt mux2 names=mux2.e0-speed-out,mux2.e0-temp-set,mux2.bed-temp-set
+addf   mux2.e0-speed-out                    servo-thread
+addf   mux2.e0-temp-set                     servo-thread
+addf   mux2.bed-temp-set                    servo-thread
+
+# Estop chain
+loadrt logic names=estopchain personality=0x108 # and 8 inputs
+addf   estopchain                           servo-thread
+
+# user components
+newsig gpio-ok bit
+newsig pwm-ok bit
+newsig temp-ok bit
+
+# Python user-mode HAL module to interface with an I2C gpio extender
+loadusr -Wn i2c-gpio ./python/Gpio.py --name i2c-gpio --bus_id 2 --address 32 --interval 0.05 --input_pins A00,A01,A02,A03,A04,A05,A06
+
+# Python user-mode HAL module to interface with an I2C PWM generator
+loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 70 --interval 0.1
+
+# Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
+loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --filter_size 10 --channels 00:none,01:epcos_B57560G1104,03:epcos_BC57560G0104F00
+
+net gpio-ok <= i2c-gpio.no-error
+net gpio-ok => estopchain.in-05
+net pwm-ok <= i2c-pwm.no-error
+net pwm-ok => estopchain.in-06
+net temp-ok <= i2c-temp.no-error
+net temp-ok => estopchain.in-07
+
+# wait the halcmd script until the UI has created the remote component 'pidctrl':
+# waitexists pidctrl
+
+# OR preconfigure the remote component like so
+# in this case no waiting required
+# pin count, name, type, direction must match exactly what
+# is in the GUI
+newcomp pidctrl timer=100 acceptdefaults
+newpin pidctrl pidctrl.Pgain              float io
+newpin pidctrl pidctrl.Igain              float io
+newpin pidctrl pidctrl.Dgain              float io
+newpin pidctrl pidctrl.maxerrorI          float io
+newpin pidctrl pidctrl.bias               float io
+newpin pidctrl pidctrl.enable             bit   out
+newpin pidctrl pidctrl.command            float out
+newpin pidctrl pidctrl.feedback           float in
+newpin pidctrl pidctrl.output             float in
+ready  pidctrl
+
+setp pidctrl.enable    FALSE
+setp pidctrl.Pgain     0.02
+setp pidctrl.Igain     0.00003
+setp pidctrl.Dgain     0.0001
+setp pidctrl.maxerrorI 0.2
+setp pidctrl.bias      0.09
+
+newcomp ledctrl timer=100 acceptdefaults
+newpin ledctrl ledctrl.color.r            u32 out
+newpin ledctrl ledctrl.color.g            u32 out
+newpin ledctrl ledctrl.color.b            u32 out
+newpin ledctrl ledctrl.color.a            u32 out
+newpin ledctrl ledctrl.color.h            float out
+newpin ledctrl ledctrl.color.s            float out
+newpin ledctrl ledctrl.color.v            float out
+ready  ledctrl
+
+setp ledctrl.color.r 255
+setp ledctrl.color.g 255
+setp ledctrl.color.b 255
+
+newcomp extruderctrl timer=100 acceptdefaults
+newpin extruderctrl extruderctrl.enable         bit out
+newpin extruderctrl extruderctrl.velocity-cmd   float out
+newpin extruderctrl extruderctrl.velocity-fb    float in
+ready extruderctrl
+
+setp extruderctrl.enable       FALSE
+setp extruderctrl.velocity-cmd 0.0
+
+# at this stage, the component and its pins exist
+# and can be linked to
+
+# ############1##########################################
+# Axis-of-motion Specific Configs (not the GUI)
+# ######################################################
+
+
+# ################
+# X [0] Axis
+# ################
+
+# axis enable chain
+newsig emcmot.00.enable bit
+sets emcmot.00.enable FALSE
+
+net emcmot.00.enable <= axis.0.amp-enable-out 
+net emcmot.00.enable => [PRUCONF](DRIVER).stepgen.00.enable
+
+
+# position command and feedback
+net emcmot.00.pos-cmd <= axis.0.motor-pos-cmd
+net emcmot.00.pos-cmd => [PRUCONF](DRIVER).stepgen.00.position-cmd
+
+net motor.00.pos-fb <= [PRUCONF](DRIVER).stepgen.00.position-fb
+net motor.00.pos-fb => axis.0.motor-pos-fb
+
+
+# timing parameters
+setp [PRUCONF](DRIVER).stepgen.00.dirsetup        [AXIS_0]DIRSETUP
+setp [PRUCONF](DRIVER).stepgen.00.dirhold         [AXIS_0]DIRHOLD
+
+setp [PRUCONF](DRIVER).stepgen.00.steplen         [AXIS_0]STEPLEN
+setp [PRUCONF](DRIVER).stepgen.00.stepspace       [AXIS_0]STEPSPACE
+
+setp [PRUCONF](DRIVER).stepgen.00.position-scale  [AXIS_0]SCALE
+
+setp [PRUCONF](DRIVER).stepgen.00.maxvel          [AXIS_0]STEPGEN_MAX_VEL
+setp [PRUCONF](DRIVER).stepgen.00.maxaccel        [AXIS_0]STEPGEN_MAX_ACC
+
+#setp [PRUCONF](DRIVER).stepgen.00.step_type       0
+# P8.12
+setp [PRUCONF](DRIVER).stepgen.00.steppin         0x4C
+# P8.11
+setp [PRUCONF](DRIVER).stepgen.00.dirpin          0x4D
+
+
+# ################
+# Y [1] Axis
+# ################
+
+# axis enable chain
+newsig emcmot.01.enable bit
+sets emcmot.01.enable FALSE
+
+net emcmot.01.enable <= axis.1.amp-enable-out 
+net emcmot.01.enable => [PRUCONF](DRIVER).stepgen.01.enable
+
+
+# position command and feedback
+net emcmot.01.pos-cmd <= axis.1.motor-pos-cmd
+net emcmot.01.pos-cmd => [PRUCONF](DRIVER).stepgen.01.position-cmd
+
+net motor.01.pos-fb <= [PRUCONF](DRIVER).stepgen.01.position-fb
+net motor.01.pos-fb => axis.1.motor-pos-fb
+
+
+# timing parameters
+setp [PRUCONF](DRIVER).stepgen.01.dirsetup        [AXIS_1]DIRSETUP
+setp [PRUCONF](DRIVER).stepgen.01.dirhold         [AXIS_1]DIRHOLD
+
+setp [PRUCONF](DRIVER).stepgen.01.steplen         [AXIS_1]STEPLEN
+setp [PRUCONF](DRIVER).stepgen.01.stepspace       [AXIS_1]STEPSPACE
+
+setp [PRUCONF](DRIVER).stepgen.01.position-scale  [AXIS_1]SCALE
+
+setp [PRUCONF](DRIVER).stepgen.01.maxvel          [AXIS_1]STEPGEN_MAX_VEL
+setp [PRUCONF](DRIVER).stepgen.01.maxaccel        [AXIS_1]STEPGEN_MAX_ACC
+
+#setp [PRUCONF](DRIVER).stepgen.01.step_type       0
+# P8.16
+setp [PRUCONF](DRIVER).stepgen.01.steppin         0x4E
+# P8.15
+setp [PRUCONF](DRIVER).stepgen.01.dirpin          0x4F
+
+
+# ################
+# Z [2] Axis Right - Gantry
+# ################
+
+# axis enable chain
+newsig emcmot.02.enable bit
+sets emcmot.02.enable FALSE
+
+net emcmot.02.enable <= axis.2.amp-enable-out 
+net emcmot.02.enable => [PRUCONF](DRIVER).stepgen.02.enable
+
+setp gantry.z.search-vel                         [AXIS_2]HOME_SEARCH_VEL
+
+# position command and feedback
+net emcmot.02.pos-cmd <= axis.2.motor-pos-cmd
+net emcmot.02.pos-cmd => gantry.z.position-cmd
+net motor.02.pos-cmd <= gantry.z.joint.00.pos-cmd
+net motor.02.pos-cmd => [PRUCONF](DRIVER).stepgen.02.position-cmd
+
+net emcmot.02.pos-fb <= gantry.z.position-fb
+net emcmot.02.pos-fb => axis.2.motor-pos-fb
+net motor.02.pos-fb <= [PRUCONF](DRIVER).stepgen.02.position-fb
+net motor.02.pos-fb => gantry.z.joint.00.pos-fb
+
+# timing parameters
+setp [PRUCONF](DRIVER).stepgen.02.dirsetup        [AXIS_2]DIRSETUP
+setp [PRUCONF](DRIVER).stepgen.02.dirhold         [AXIS_2]DIRHOLD
+
+setp [PRUCONF](DRIVER).stepgen.02.steplen         [AXIS_2]STEPLEN
+setp [PRUCONF](DRIVER).stepgen.02.stepspace       [AXIS_2]STEPSPACE
+
+setp [PRUCONF](DRIVER).stepgen.02.position-scale  [AXIS_2]SCALE
+
+setp [PRUCONF](DRIVER).stepgen.02.maxvel          [AXIS_2]STEPGEN_MAX_VEL
+setp [PRUCONF](DRIVER).stepgen.02.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
+
+#setp [PRUCONF](DRIVER).stepgen.02.step_type       0
+# P9.13
+setp [PRUCONF](DRIVER).stepgen.02.steppin         63
+# P9.25
+setp [PRUCONF](DRIVER).stepgen.02.dirpin          149
+
+
+# ################
+# Z [3] Axis Left - Gantry
+# ################
+
+# axis enable chain
+#newsig emcmot.03.enable bit
+#sets emcmot.03.enable FALSE
+
+#net emcmot.03.enable <= axis.2.amp-enable-out 
+net emcmot.02.enable => [PRUCONF](DRIVER).stepgen.03.enable
+
+
+# position command and feedback
+net motor.03.pos-cmd <= gantry.z.joint.01.pos-cmd
+net motor.03.pos-cmd => [PRUCONF](DRIVER).stepgen.03.position-cmd
+
+net motor.03.pos-fb <= [PRUCONF](DRIVER).stepgen.03.position-fb
+net motor.03.pos-fb => gantry.z.joint.01.pos-fb
+
+# timing parameters
+setp [PRUCONF](DRIVER).stepgen.03.dirsetup        [AXIS_2]DIRSETUP
+setp [PRUCONF](DRIVER).stepgen.03.dirhold         [AXIS_2]DIRHOLD
+
+setp [PRUCONF](DRIVER).stepgen.03.steplen         [AXIS_2]STEPLEN
+setp [PRUCONF](DRIVER).stepgen.03.stepspace       [AXIS_2]STEPSPACE
+
+setp [PRUCONF](DRIVER).stepgen.03.position-scale  [AXIS_2]SCALE
+
+setp [PRUCONF](DRIVER).stepgen.03.maxvel          [AXIS_2]STEPGEN_MAX_VEL
+setp [PRUCONF](DRIVER).stepgen.03.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
+
+#setp [PRUCONF](DRIVER).stepgen.03.step_type       0
+# P9.22
+setp [PRUCONF](DRIVER).stepgen.03.steppin         34
+# P9.21
+setp [PRUCONF](DRIVER).stepgen.03.dirpin          35
+
+
+# ################
+# A [4] Axis (Extruder) - Velocity control
+# ################
+
+# axis enable chain
+newsig emcmot.03.enable bit
+sets emcmot.03.enable FALSE
+
+net emcmot.03.enable <= axis.3.amp-enable-out 
+net emcmot.03.enable => [PRUCONF](DRIVER).stepgen.04.enable
+
+#here i pass the value of the analog output from M67 E1 Q.. or M68 E1 Q.. to the multiplicator
+net line-width motion.analog-out-02 => mult2.ve-line-cross.in0
+net line-height motion.analog-out-03 => mult2.ve-line-cross.in1
+net line-cross-section mult2.ve-line-cross.out => mult2.ve-nozzle-discharge.in1
+
+#take all the actual speeds from the axes and calculate resulting speed.
+net xvel axis.0.joint-vel-cmd => abs.ve-xvel.in
+net xvel-abs abs.ve-xvel.out => hypot.ve-nozzle-vel.in0
+net yvel axis.1.joint-vel-cmd => abs.ve-yvel.in
+net yvel-abs abs.ve-yvel.out => hypot.ve-nozzle-vel.in1
+net zvel axis.2.joint-vel-cmd => abs.ve-zvel.in
+net zvel-abs abs.ve-zvel.out => hypot.ve-nozzle-vel.in2
+
+#multiply area with speed and we get discharge (mm^3 per second)
+net nozzle-vel-cartesian hypot.ve-nozzle-vel.out => mult2.ve-nozzle-discharge.in0
+net nozzle-discharge mult2.ve-nozzle-discharge.out => mult2.ve-extrude-rate.in0
+
+#calaulate filament cross section area
+#PI divided by 4
+setp mult2.ve-filament-area.in0 0.785398163397
+setp mult2.ve-diameter-squared.in0 [EXTRUDER]DIA_FILAMENT
+setp mult2.ve-diameter-squared.in1 [EXTRUDER]DIA_FILAMENT
+
+net diameter-squared mult2.ve-diameter-squared.out => mult2.ve-filament-area.in1
+net filament-area mult2.ve-filament-area.out => invert.ve-filament-area.in
+net divide-by-filament-area invert.ve-filament-area.out => mult2.ve-extrude-rate.in1
+
+#net extruder-speed mux4.ve-extruder-speed.out => [PRUCONF](DRIVER).stepgen.03.velocity-cmd
+
+# now the solution of Andy Pugh for automatically retracting/priming
+#loadrt mux4 count=1
+#00 = motion without extrusion
+#01 = retract
+#10 = motion with extrusion
+#11 = pre-charge
+
+setp mux4.ve-extruder-speed.in0 0
+setp mux4.ve-extruder-speed.in1 -4
+net extrude-rate mult2.ve-extrude-rate.out => mux4.ve-extruder-speed.in2
+setp mux4.ve-extruder-speed.in3 4
+
+# We want the retract-charge to run for a fixed time:
+# when sel0 set to "1" meaning motion with extrusion" the on the rising edge
+# there will temporarily be also sel1 which is high, meaning a pre-charge because the
+# sel combination is 11
+# when sel1 set to "0" meaning decoupling motion with extrusion" then the falling edge
+# will trigger a 01 combination, meaning a retract
+net trigger motion.digital-out-02 oneshot.ve-retract-wait.in mux4.ve-extruder-speed.sel1
+net pulse oneshot.ve-retract-wait.out mux4.ve-extruder-speed.sel0 motion.feed-hold
+setp oneshot.ve-retract-wait.rising 1
+setp oneshot.ve-retract-wait.falling 1
+setp oneshot.ve-retract-wait.retriggerable 1
+#setp oneshot.ve-retract-wait.width 0.0
+#by setting the width, the automatic retract/precharge can be disabled
+net trigger-time motion.analog-out-04 => oneshot.ve-retract-wait.width
+
+#get readout from the current motion pin
+net current-motion-type motion.current-motion
+
+#net trigger-finished oneshot.ve-retract-wait.out-not motion.digital-in-01
+#net feed-hold oneshot.ve-retract-wait.out => motion.feed-hold
+
+# these are used for a small offset in velocity during acceleration (buildup pressure inside
+# the nozzle because of the current speed. Take the maximum accel you've specified in .ini
+#setp lincurve.ve-speed-adjustment.x-val-00 -3500
+#setp lincurve.ve-speed-adjustment.x-val-01 0
+#setp lincurve.ve-speed-adjustment.x-val-02 3000
+#setp lincurve.ve-speed-adjustment.y-val-00 -3500
+#setp lincurve.ve-speed-adjustment.y-val-01 0
+#setp lincurve.ve-speed-adjustment.y-val-02 3500
+
+setp lincurve.ve-speed-adjustment.x-val-00 -18
+setp lincurve.ve-speed-adjustment.x-val-01 0
+setp lincurve.ve-speed-adjustment.x-val-02 18
+setp lincurve.ve-speed-adjustment.y-val-00 -5.5
+setp lincurve.ve-speed-adjustment.y-val-01 0
+setp lincurve.ve-speed-adjustment.y-val-02 5.5
+
+# get the extruder speed into sum2.ve-speed and ddt
+net extruder-speed mux4.ve-extruder-speed.out sum2.ve-speed.in0 ddt.ve-extruder-accel.in
+# get acceleration into lincurve
+net extruder-accel ddt.ve-extruder-accel.out lincurve.ve-speed-adjustment.in
+# get adjusted speed for adding to current speed during accelleration
+net speed-adjustment lincurve.ve-speed-adjustment.out sum2.ve-speed.in1
+net extruder-speed-adjusted sum2.ve-speed.out mux2.e0-speed-out.in0
+
+# multiplex output
+net extruder-speed-out mux2.e0-speed-out.out => [PRUCONF](DRIVER).stepgen.04.velocity-cmd
+
+#########
+###todo
+###manual extrusion with analog out 01 (velocity in mm/s) and mux2 selectable by digital input 01
+#########
+net extruder-speed-user-out     extruderctrl.velocity-cmd => mux2.e0-speed-out.in1
+net extruder-speed-user-enable  extruderctrl.enable => mux2.e0-speed-out.sel
+net extruder-speed-out => extruderctrl.velocity-fb
+
+
+# position command and feedback
+net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
+net emcmot.03.pos-cmd => [PRUCONF](DRIVER).stepgen.04.position-cmd
+
+net motor.04.pos-fb <= [PRUCONF](DRIVER).stepgen.04.position-fb
+net motor.04.pos-fb => axis.3.motor-pos-fb
+
+# timing parameters
+setp [PRUCONF](DRIVER).stepgen.04.dirsetup        [AXIS_3]DIRSETUP
+setp [PRUCONF](DRIVER).stepgen.04.dirhold         [AXIS_3]DIRHOLD
+
+setp [PRUCONF](DRIVER).stepgen.04.steplen         [AXIS_3]STEPLEN
+setp [PRUCONF](DRIVER).stepgen.04.stepspace       [AXIS_3]STEPSPACE
+
+setp [PRUCONF](DRIVER).stepgen.04.position-scale  [AXIS_3]SCALE
+
+setp [PRUCONF](DRIVER).stepgen.04.maxvel          [AXIS_3]STEPGEN_MAX_VEL
+setp [PRUCONF](DRIVER).stepgen.04.maxaccel        [AXIS_3]STEPGEN_MAX_ACC
+
+#setp [PRUCONF](DRIVER).stepgen.04.control-type    1
+
+#setp [PRUCONF](DRIVER).stepgen.04.step_type       0
+# P9.11
+setp [PRUCONF](DRIVER).stepgen.04.steppin         62
+# P9.42
+setp [PRUCONF](DRIVER).stepgen.04.dirpin          39
+
+
+# ##################################################
+# Standard I/O - EStop, Enables, Limit Switches, Etc
+# ##################################################
+
+# Create estop signal chain
+# Drive software estop to hardware
+net estop-user iocontrol.0.user-enable-out => estopchain.in-00
+net estop-out estopchain.and => bb_gpio.p8.out-19
+setp bb_gpio.p8.out-19.invert 1
+
+# Use charge pump to drive the relay output
+net relay-out charge-pump.out => bb_gpio.p9.out-26
+net estop-out => charge-pump.enable
+
+# Monitor estop input from hardware
+net estop-loop bb_gpio.p9.in-41 => iocontrol.0.emc-enable-in
+setp bb_gpio.p9.in-41.invert 1
+
+# create signals for tool loading loopback
+net tool-prep-loop iocontrol.0.tool-prepare => iocontrol.0.tool-prepared
+net tool-change-loop iocontrol.0.tool-change => iocontrol.0.tool-changed
+
+# Axis enable signal (active low)
+#net emcmot.00.enable => bb_gpio.p8.out-07
+#setp bb_gpio.p8.out-07.invert 1
+
+# Machine power
+net emcmot.00.enable => bb_gpio.p8.out-07
+
+# Tie machine power signal to the Parport Cape LED
+# Feel free to tie any other signal you like to the LED
+net emcmot.00.enable => bb_gpio.p8.out-26
+
+# ################
+# Limit Switches
+# ################
+newsig limit-x-min bit
+newsig limit-x-max bit
+newsig limit-y-min bit
+newsig limit-y-max bit
+newsig limit-z-min bit
+newsig limit-z-max bit
+newsig home-z      bit
+newsig home-x      bit
+newsig home-y      bit
+
+net limit-x-min <= i2c-gpio.A.in-00
+net limit-x-max <= i2c-gpio.A.in-01
+net limit-y-min <= i2c-gpio.A.in-02
+net limit-y-max <= i2c-gpio.A.in-03
+net limit-z-min <= i2c-gpio.A.in-04
+net limit-z-max <= i2c-gpio.A.in-05
+
+net home-z      <= gantry.z.home
+
+# Adjust as needed for your switch polarity
+setp i2c-gpio.A.in-00.invert 1
+setp i2c-gpio.A.in-01.invert 1
+setp i2c-gpio.A.in-02.invert 1
+setp i2c-gpio.A.in-03.invert 1
+setp i2c-gpio.A.in-04.invert 1
+setp i2c-gpio.A.in-05.invert 1
+
+# Enable pullup for mechanical endstops
+setp i2c-gpio.A.in-00.pullup 1
+setp i2c-gpio.A.in-01.pullup 1
+setp i2c-gpio.A.in-02.pullup 1
+setp i2c-gpio.A.in-03.pullup 1
+setp i2c-gpio.A.in-04.pullup 0
+setp i2c-gpio.A.in-05.pullup 0
+
+# Uncomment if you actually have limit switches setup
+# You probably want to setup homing in the INI file, as well
+net limit-x-min => axis.0.home-sw-in
+#net limit-x-min => axis.0.neg-lim-sw-in
+#net limit-x-max => axis.0.pos-lim-sw-in
+net limit-y-min => axis.1.home-sw-in
+#net limit-y-min => axis.1.neg-lim-sw-in
+#net limit-y-max => axis.1.pos-lim-sw-in
+#net limit-z-min => gantry.z.joint.00.home
+net  limit-z-min => gantry.z.joint.00.home
+net  limit-z-max => gantry.z.joint.01.home
+net  home-z      => axis.2.home-sw-in
+#net limit-z-min => axis.2.home-sw-in
+#net limit-z-min => axis.2.neg-lim-sw-ingggg
+#net limit-z-max => axis.2.pos-lim-sw-in
+
+# FSR as limit switch
+#newsig bed-fsr-limit float
+#newsig bed-fsr-value float
+#newsig bed-fsr-out   bit
+
+
+# ################
+# Probe
+# ################
+newsig probe-input bit
+newsig probe-enable bit
+newsig probe-signal bit
+
+setp i2c-gpio.A.in-06.invert 1
+setp i2c-gpio.A.in-06.pullup 1
+
+net probe-signal <= i2c-gpio.A.in-06
+net probe-signal => and2.probe.in0
+net probe-enable <= motion.digital-out-00
+net probe-enable => and2.probe.in1
+net probe-input  <= and2.probe.out
+net probe-input  => motion.probe-input
+
+
+# ##################################################
+# PWM and Temperature Signals
+# ##################################################
+
+# Bed Heater FET 1
+setp i2c-pwm.out-00.enable 1
+setp i2c-pwm.out-00.value  0.0
+
+# E0 Heater FET 2
+setp i2c-pwm.out-01.enable 1
+setp i2c-pwm.out-01.value  0.0
+
+# Fan 1 FET 3
+setp i2c-pwm.out-02.enable 1
+setp i2c-pwm.out-02.value  0.0
+
+# FET 4 - Fan / LED
+setp i2c-pwm.out-03.enable 1
+setp i2c-pwm.out-03.value  0.0
+
+# FET 5 - Fan / LED
+setp i2c-pwm.out-04.enable 1
+setp i2c-pwm.out-04.value  0.0
+
+# FET 6 - Fan / LED
+setp i2c-pwm.out-05.enable 1
+setp i2c-pwm.out-05.value  0.0
+
+# FET 7 - Fan / LED
+setp i2c-pwm.out-06.enable 1
+setp i2c-pwm.out-06.value  0.0
+
+# FET 8 - Fan / LED
+setp i2c-pwm.out-07.enable 1
+setp i2c-pwm.out-07.value  0.0
+
+setp i2c-pwm.frequency 1000
+
+
+# Define signals to use elsewhere (ie: M1xx codes)
+# If you change any names here, lots of things will break!
+newsig e0.temp.set               float
+newsig e0.temp.set-program       float
+newsig e0.temp.set-user          float
+newsig e0.temp.meas              float
+newsig e0.temp.measl             float
+newsig e0.temp.range.pos_error   float
+newsig e0.temp.range.neg_error   float
+newsig e0.temp.range.max         float
+newsig e0.temp.range.min         float
+newsig e0.temp.range.lowpassgain float
+newsig e0.temp.in_range          bit
+newsig e0.temp.pwm               float
+newsig e0.temp.limit.low         float
+newsig e0.temp.limit.high        float
+newsig e0.temp.in_limit          bit
+newsig e0.therm_working          bit
+
+newsig bed.temp.set              float
+newsig bed.temp.set-program      float
+newsig bed.temp.set-user         float
+newsig bed.temp.meas             float
+newsig bed.temp.range.pos_error  float
+newsig bed.temp.range.neg_error  float
+newsig bed.temp.range.max        float
+newsig bed.temp.range.min        float
+newsig bed.temp.in_range         bit
+newsig bed.temp.pwm              float
+newsig bed.temp.limit.low        float
+newsig bed.temp.limit.high       float
+newsig bed.temp.in_limit         bit
+newsig bed.therm_working         bit
+
+# Extruder 0 temperature control
+# --------------------------------------------------------------------------
+# Machine dependent
+net e0.temp.meas        <= i2c-temp.ch-01.value
+net e0.heaterl          => i2c-pwm.out-01.value
+net e0.temp.in_range    => motion.digital-in-00
+net e0.temp.set-program <= motion.analog-out-01
+net e0.temp.set-user    <= pidctrl.command
+net e0.temp.in_limit    => estopchain.in-01
+net e0.therm_working    => estopchain.in-02
+
+# PID
+net emcmot.00.enable  =>   pid.e0-temp.enable
+net e0.temp.meas   => pid.e0-temp.feedback
+net e0.temp.set    => pid.e0-temp.command
+net e0.heater      <= pid.e0-temp.output
+net e0.heater      => limit1.e0-heater.in
+net e0.heaterl     <= limit1.e0-heater.out
+
+# Limit heater PWM to positive values
+# PWM mimics hm2 implementation, which generates output for negative values
+setp limit1.e0-heater.min 0.0
+setp limit1.e0-heater.max 1.0
+
+# Temperature checking
+net e0.temp.set              => sum2.e0-temp-range-pos.in0
+net e0.temp.range.pos_error  => sum2.e0-temp-range-pos.in1
+net e0.temp.set              => sum2.e0-temp-range-neg.in0
+net e0.temp.range.neg_error  => sum2.e0-temp-range-neg.in1
+
+# the lowpass filters the temperature to make sure it is stable when the wcomp is triggered
+net e0.temp.range.lowpassgain => lowpass.e0-temp-range.gain
+net e0.temp.meas              => lowpass.e0-temp-range.in
+net e0.temp.measl             <= lowpass.e0-temp-range.out
+
+net e0.temp.range.min sum2.e0-temp-range-neg.out => wcomp.e0-temp-range.min
+net e0.temp.range.max sum2.e0-temp-range-pos.out => wcomp.e0-temp-range.max
+net e0.temp.measl                => wcomp.e0-temp-range.in
+#the output of wcomp.e0-temp-range will say if measured temperature is in range of set value
+#this needs to be coupled to a digital input for M66 readout
+net e0.temp.in_range <= wcomp.e0-temp-range.out
+
+# multiplex user and program input
+net e0.temp.set-program => mux2.e0-temp-set.in0
+net e0.temp.set-user    => mux2.e0-temp-set.in1
+net e0.temp.set         <= mux2.e0-temp-set.out
+
+# limit the output temperature to prevent damage when thermistor is broken/removed
+net e0.temp.limit.low         => wcomp.e0-temp-limit.min
+net e0.temp.limit.high        => wcomp.e0-temp-limit.max
+net e0.temp.meas              => wcomp.e0-temp-limit.in
+net e0.temp.in_limit          <= wcomp.e0-temp-limit.out
+
+# check the thermistor
+net e0.temp.meas              => thermistor-check.e0.temp
+net e0.temp.in_range          => not.e0-temp-range.in
+net e0.temp.in_range_n        <= not.e0-temp-range.out
+net e0.temp.in_range_n        => thermistor-check.e0.enable
+net e0.heaterl                => thermistor-check.e0.pid
+net e0.therm_working          <= thermistor-check.e0.out
+
+# PID parameters
+#setp pid.e0-temp.FF0      0
+#setp pid.e0-temp.FF1      0
+#setp pid.e0-temp.FF2      0
+setp pid.e0-temp.Pgain     0.10
+setp pid.e0-temp.Igain     0.00001
+setp pid.e0-temp.Dgain     1.5
+setp pid.e0-temp.maxerrorI 1.0
+setp pid.e0-temp.bias      0.15
+setp pid.e0-temp.maxoutput 1.0
+
+# Parameters
+sets e0.temp.range.pos_error 1.0
+sets e0.temp.range.neg_error -1.0
+sets e0.temp.range.lowpassgain 0.0008
+sets e0.temp.limit.low       0.0
+sets e0.temp.limit.high      280.0
+
+setp thermistor-check.e0.wait 30
+setp thermistor-check.e0.min-pid 0.25
+setp thermistor-check.e0.min-temp 1.5
+
+
+# Bed temperature control
+# ----------------------------------------------------------------------------
+# Machine dependent
+net bed.temp.meas        <= i2c-temp.ch-03.value
+net bed.heaterl          => i2c-pwm.out-00.value
+net bed.temp.in_range    => motion.digital-in-01
+net bed.temp.set-program <= motion.analog-out-05
+net bed.temp.in_limit    => estopchain.in-03
+net bed.therm_working    => estopchain.in-04
+
+# PID
+net emcmot.00.enable => pid.bed-temp.enable
+net bed.temp.meas    => pid.bed-temp.feedback
+net bed.temp.set     => pid.bed-temp.command
+net bed.heater       <= pid.bed-temp.output
+net bed.heater       => limit1.bed-heater.in
+net bed.heaterl      <= limit1.bed-heater.out
+
+# Limit heater PWM to positive values
+# PWM mimics hm2 implementation, which generates output for negative values
+setp limit1.bed-heater.min 0
+setp limit1.bed-heater.max 0.9
+
+# Temperature checking
+net bed.temp.set              => sum2.bed-temp-range-pos.in0
+net bed.temp.range.pos_error  => sum2.bed-temp-range-pos.in1
+net bed.temp.set              => sum2.bed-temp-range-neg.in0
+net bed.temp.range.neg_error  => sum2.bed-temp-range-neg.in1
+
+net bed.temp.range.min sum2.bed-temp-range-neg.out => wcomp.bed-temp-range.min
+net bed.temp.range.max sum2.bed-temp-range-pos.out => wcomp.bed-temp-range.max
+net bed.temp.meas                 => wcomp.bed-temp-range.in
+#the output of wcomp.e0-temp-range will say if measured temperature is in range of set value
+#this needs to be coupled to a digital input for M66 readout
+net bed.temp.in_range <= wcomp.bed-temp-range.out
+
+# multiplex user and program input
+net bed.temp.set-program => mux2.bed-temp-set.in0
+net bed.temp.set-user    => mux2.bed-temp-set.in1
+net bed.temp.set         <= mux2.bed-temp-set.out
+
+# limit the output temperature to prevent damage when thermistor is broken/removed
+net bed.temp.limit.low         => wcomp.bed-temp-limit.min
+net bed.temp.limit.high        => wcomp.bed-temp-limit.max
+net bed.temp.meas              => wcomp.bed-temp-limit.in
+net bed.temp.in_limit          <= wcomp.bed-temp-limit.out
+
+# check the thermistor
+net bed.temp.meas              => thermistor-check.bed.temp
+net bed.temp.in_range          => not.bed-temp-range.in
+net bed.temp.in_range_n        <= not.bed-temp-range.out
+net bed.temp.in_range_n        => thermistor-check.bed.enable
+net bed.heaterl                => thermistor-check.bed.pid
+net bed.therm_working          <= thermistor-check.bed.out
+
+# PID parameters
+#setp pid.bed-temp.FF0      0
+#setp pid.bed-temp.FF1      0
+#setp pid.bed-temp.FF2      0
+setp pid.bed-temp.Pgain  1
+setp pid.bed-temp.Igain  0.0
+setp pid.bed-temp.Dgain  0.0
+setp pid.bed-temp.maxerrorI 1.0
+setp pid.bed-temp.bias    0.5
+
+# Parameters
+sets bed.temp.range.pos_error 2.0
+sets bed.temp.range.neg_error -2.0
+sets bed.temp.limit.low       0.0
+sets bed.temp.limit.high      150.0
+
+setp thermistor-check.bed.wait 60
+setp thermistor-check.bed.min-pid 0.3
+setp thermistor-check.bed.min-temp 1.5
+
+
+# PIDctrl
+net pid.Pgain       pidctrl.Pgain => pid.e0-temp.Pgain
+net pid.Igain       pidctrl.Igain => pid.e0-temp.Igain
+net pid.Dgain       pidctrl.Dgain => pid.e0-temp.Dgain
+net pid.maxerrorI   pidctrl.maxerrorI => pid.e0-temp.maxerrorI
+net pid.bias        pidctrl.bias => pid.e0-temp.bias
+net e0.temp.meas => pidctrl.feedback
+net e0.heater =>    pidctrl.output
+net pid.enable      pidctrl.enable => mux2.e0-temp-set.sel
+
+
+
+# ##################################################
+# RGB LED
+# ##################################################
+newsig rgb_led.r   float
+newsig rgb_led.g   float
+newsig rgb_led.b   float
+newsig rgb_led.r_in u32
+newsig rgb_led.g_in u32
+newsig rgb_led.b_in u32
+
+#net rgb_led.r => i2c-pwm.out-04.value
+#net rgb_led.g => i2c-pwm.out-05.value
+#net rgb_led.b => i2c-pwm.out-03.value
+
+net rgb_led.r <= led-dim.led-r.output
+net rgb_led.g <= led-dim.led-g.output
+net rgb_led.b <= led-dim.led-b.output
+
+net rgb_led.r_in <= ledctrl.color.r
+net rgb_led.r_in => led-dim.led-r.input
+net rgb_led.g_in <= ledctrl.color.g
+net rgb_led.g_in => led-dim.led-g.input
+net rgb_led.b_in <= ledctrl.color.b
+net rgb_led.b_in => led-dim.led-b.input
+
+setp led-dim.led-r.factor 5.0
+setp led-dim.led-r.steps  256
+setp led-dim.led-r.max-pwm 4095
+setp led-dim.led-g.factor 5.0
+setp led-dim.led-g.steps  256
+setp led-dim.led-g.max-pwm 4095
+setp led-dim.led-b.factor 5.0
+setp led-dim.led-b.steps  256
+setp led-dim.led-b.max-pwm 4095
+
+# ##################################################
+# Fans
+# ##################################################
+newsig e0.fan.set   float
+newsig e0.fan.pwm   float
+
+# E0 Fan
+# -------
+net e0.fan.pwm => i2c-pwm.out-03.value
+
+setp scale.e0-fan.gain 0.00392156862745
+net e0.fan.set => scale.e0-fan.in
+net e0.fan.set <= motion.analog-out-00
+net e0.fan.pwm <= scale.e0-fan.out
+
+# Hotend Fan
+# -----------
+setp i2c-pwm.out-04.value  1.0
+
+# Hotend lights
+# ------------
+setp i2c-pwm.out-05.value  1.0
+
+# Test
+setp i2c-pwm.out-07.value  1.0
+
+# Pinter UI remote component
+newcomp printerui timer=100 acceptdefaults
+newpin printerui printerui.e0.temp.meas float in
+newpin printerui printerui.e0.temp.set float in
+newpin printerui printerui.bed.temp.meas float in
+newpin printerui printerui.bed.temp.set float in
+newpin printerui printerui.e0.fan.pwm float in
+ready printerui
+
+net e0.temp.meas => printerui.e0.temp.meas
+net e0.temp.set => printerui.e0.temp.set
+net bed.temp.meas => printerui.bed.temp.meas
+net bed.temp.set => printerui.bed.temp.set
+net e0.fan.pwm => printerui.e0.fan.pwm
+
+# monitor the estop error sources
+newg error-sources 100
+newm error-sources estop-user
+newm error-sources gpio-ok
+newm error-sources pwm-ok
+newm error-sources temp-ok
+newm error-sources e0.temp.in_limit
+newm error-sources e0.therm_working
+newm error-sources bed.temp.in_limit
+newm error-sources bed.therm_working
