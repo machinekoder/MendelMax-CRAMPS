@@ -27,106 +27,107 @@ loadrt gantry names=gantry.z personality=2
 
 # load low-level drivers
 loadrt hal_bb_gpio output_pins=107,119,126,226 input_pins=241
-
 loadrt [PRUCONF](DRIVER) prucode=$(LINUXCNC_HOME)/[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
 
+# other components
 loadrt pid names=pid.e0-temp,pid.bed-temp
-
 loadrt limit1 names=limit1.e0-heater,limit1.bed-heater
+loadrt scale names=scale.e0-fan
+loadrt led_dim names=led-dim.led-r,led-dim.led-g,led-dim.led-b
+loadrt charge_pump
+loadrt thermistor_check names=thermistor-check.e0,thermistor-check.bed
+loadrt not names=not.e0-temp-range,not.bed-temp-range
+loadrt wcomp names=wcomp.e0-temp-range,wcomp.bed-temp-range,wcomp.e0-temp-limit,wcomp.bed-temp-limit
+loadrt lowpass names=lowpass.e0-temp-range,lowpass.bed-temp-range
+loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.bed-temp-range-neg,sum2.bed-temp-range-pos,sum2.ve-speed
+loadrt mult2 names=mult2.ve-line-cross,mult2.ve-nozzle-discharge,mult2.ve-extrude-rate,mult2.ve-filament-area,mult2.ve-diameter-squared
+loadrt abs names=abs.ve-xvel,abs.ve-yvel,abs.ve-zvel
+loadrt hypot names=hypot.ve-nozzle-vel
+loadrt invert names=invert.ve-filament-area
+loadrt mux4 names=mux4.ve-extruder-speed
+loadrt oneshot names=oneshot.ve-retract-wait
+loadrt ddt names=ddt.ve-extruder-accel
+loadrt lincurve names=lincurve.ve-speed-adjustment personality=3
+loadrt and2 names=and2.probe
+loadrt mux2 names=mux2.e0-speed-out,mux2.e0-temp-set,mux2.bed-temp-set
+loadrt logic names=estopchain personality=0x108 # and 8 inputs
+
 
 addf   [PRUCONF](DRIVER).capture-position   servo-thread
 addf   bb_gpio.read                         servo-thread
 addf   gantry.z.read                        servo-thread
 addf   motion-command-handler               servo-thread
+addf   and2.probe                           servo-thread
 addf   motion-controller                    servo-thread
+# E0
 addf   pid.e0-temp.do-pid-calcs             servo-thread
-addf   pid.bed-temp.do-pid-calcs            servo-thread
 addf   limit1.e0-heater                     servo-thread
-addf   limit1.bed-heater                    servo-thread
-addf   gantry.z.write                       servo-thread
-addf   [PRUCONF](DRIVER).update             servo-thread
-addf   bb_gpio.write                        servo-thread
-
-
-loadrt scale names=scale.e0-fan
-addf   scale.e0-fan                         servo-thread
-
-loadrt led_dim names=led-dim.led-r,led-dim.led-g,led-dim.led-b
-#addf led-dim.led-r.update                     run-thread
-#addf led-dim.led-g.update                     run-thread
-#addf led-dim.led-b.update                     run-thread
-
-loadrt charge_pump
-addf   charge-pump                          run-thread
-
-loadrt thermistor_check names=thermistor-check.e0,thermistor-check.bed
-addf   thermistor-check.e0                  check-thread
-addf   thermistor-check.bed                 check-thread
-
-loadrt not names=not.e0-temp-range,not.bed-temp-range
-addf   not.e0-temp-range                    servo-thread
-addf   not.bed-temp-range                   servo-thread
-
-loadrt wcomp names=wcomp.e0-temp-range,wcomp.bed-temp-range,wcomp.e0-temp-limit,wcomp.bed-temp-limit
-addf   wcomp.e0-temp-range                  servo-thread
-addf   wcomp.bed-temp-range                 servo-thread
-addf   wcomp.e0-temp-limit                  servo-thread
-addf   wcomp.bed-temp-limit                 servo-thread
-
-loadrt lowpass names=lowpass.e0-temp-range,lowpass.bed-temp-range
-addf   lowpass.e0-temp-range                servo-thread
-addf   lowpass.bed-temp-range               servo-thread
-
-loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.bed-temp-range-neg,sum2.bed-temp-range-pos,sum2.ve-speed
 addf   sum2.e0-temp-range-neg               servo-thread
 addf   sum2.e0-temp-range-pos               servo-thread
+addf   lowpass.e0-temp-range                servo-thread
+addf   wcomp.e0-temp-range                  servo-thread
+addf   not.e0-temp-range                    servo-thread
+addf   wcomp.e0-temp-limit                  servo-thread
+addf   scale.e0-fan                         servo-thread
+# Bed
 addf   sum2.bed-temp-range-neg              servo-thread
 addf   sum2.bed-temp-range-pos              servo-thread
-addf   sum2.ve-speed                        servo-thread
-
-loadrt mult2 names=mult2.ve-line-cross,mult2.ve-nozzle-discharge,mult2.ve-extrude-rate,mult2.ve-filament-area,mult2.ve-diameter-squared
-addf   mult2.ve-line-cross                  servo-thread
-addf   mult2.ve-nozzle-discharge            servo-thread
-addf   mult2.ve-extrude-rate                servo-thread
-addf   mult2.ve-filament-area               servo-thread
-addf   mult2.ve-diameter-squared            servo-thread
-
-loadrt abs names=abs.ve-xvel,abs.ve-yvel,abs.ve-zvel
-addf   abs.ve-xvel                          servo-thread
-addf   abs.ve-yvel                          servo-thread
-addf   abs.ve-zvel                          servo-thread
-
-loadrt hypot names=hypot.ve-nozzle-vel
-addf   hypot.ve-nozzle-vel                  servo-thread
-
-loadrt invert names=invert.ve-filament-area
-addf   invert.ve-filament-area              servo-thread
-
-loadrt mux4 names=mux4.ve-extruder-speed
-addf   mux4.ve-extruder-speed               servo-thread
-
-loadrt oneshot names=oneshot.ve-retract-wait
-addf   oneshot.ve-retract-wait              servo-thread
-
-loadrt ddt names=ddt.ve-extruder-accel
-addf   ddt.ve-extruder-accel                servo-thread
-
-loadrt lincurve names=lincurve.ve-speed-adjustment personality=3
-addf   lincurve.ve-speed-adjustment         servo-thread
-
-# probe input
-loadrt and2 names=and2.probe
-addf   and2.probe                           servo-thread
+addf   lowpass.bed-temp-range               servo-thread
+addf   wcomp.bed-temp-range                 servo-thread
+addf   not.bed-temp-range                   servo-thread
+addf   wcomp.bed-temp-limit                 servo-thread
+addf   pid.bed-temp.do-pid-calcs            servo-thread
+addf   limit1.bed-heater                    servo-thread
 
 # control from HAL
-loadrt mux2 names=mux2.e0-speed-out,mux2.e0-temp-set,mux2.bed-temp-set
 addf   mux2.e0-speed-out                    servo-thread
 addf   mux2.e0-temp-set                     servo-thread
 addf   mux2.bed-temp-set                    servo-thread
 
 # Estop chain
-loadrt logic names=estopchain personality=0x108 # and 8 inputs
 addf   estopchain                           servo-thread
+
+# Update functions
+addf   gantry.z.write                       servo-thread
+addf   [PRUCONF](DRIVER).update             servo-thread
+addf   bb_gpio.write                        servo-thread
+
+
+addf   charge-pump                          run-thread
+#addf led-dim.led-r.update                     run-thread
+#addf led-dim.led-g.update                     run-thread
+#addf led-dim.led-b.update                     run-thread
+
+
+addf   thermistor-check.e0                  check-thread
+addf   thermistor-check.bed                 check-thread
+
+
+# Related to velocity extruding
+#addf   sum2.ve-speed                        servo-thread
+
+#addf   mult2.ve-line-cross                  servo-thread
+#addf   mult2.ve-nozzle-discharge            servo-thread
+#addf   mult2.ve-extrude-rate                servo-thread
+#addf   mult2.ve-filament-area               servo-thread
+#addf   mult2.ve-diameter-squared            servo-thread
+
+#addf   abs.ve-xvel                          servo-thread
+#addf   abs.ve-yvel                          servo-thread
+#addf   abs.ve-zvel                          servo-thread
+
+#addf   hypot.ve-nozzle-vel                  servo-thread
+
+#addf   invert.ve-filament-area              servo-thread
+
+#addf   mux4.ve-extruder-speed               servo-thread
+
+#addf   oneshot.ve-retract-wait              servo-thread
+
+#addf   ddt.ve-extruder-accel                servo-thread
+
+#addf   lincurve.ve-speed-adjustment         servo-thread
+
 
 # user components
 newsig gpio-ok bit
