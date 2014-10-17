@@ -1,0 +1,3 @@
+o<bedtemp> sub
+    M68 E5 Q#<P>
+o<bedtemp> end sub 

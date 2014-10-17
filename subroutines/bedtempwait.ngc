@@ -1,0 +1,4 @@
+o<bedtempwait> sub
+    M68 E5 Q#<P>
+    M66 P1 L3 Q1000
+o<bedtempwait> end sub 

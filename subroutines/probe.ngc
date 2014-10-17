@@ -1,0 +1,10 @@
+o<probe> sub
+    G0 Z1
+    G0 X120 Y125
+    M64 P00
+    G38.2 Z-1.5 F30
+    M65 P00
+    G10 L20 P1 Z0.5
+    G0 Z1
+    G0 X85
+o<probe> end sub 

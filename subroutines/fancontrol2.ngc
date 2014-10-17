@@ -1,0 +1,3 @@
+o<fancontrol2> sub
+    M68 E0 Q#<P>
+o<fancontrol2> end sub 

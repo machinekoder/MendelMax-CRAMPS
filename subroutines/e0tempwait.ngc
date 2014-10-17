@@ -1,0 +1,4 @@
+o<e0tempwait> sub
+    M68 E1 Q#<P>
+    M66 P0 L3 Q1000
+o<e0tempwait> end sub 
