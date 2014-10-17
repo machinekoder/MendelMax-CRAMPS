@@ -134,13 +134,13 @@ newsig pwm-ok bit
 newsig temp-ok bit
 
 # Python user-mode HAL module to interface with an I2C gpio extender
-loadusr -Wn i2c-gpio ./python/Gpio.py --name i2c-gpio --bus_id 2 --address 32 --interval 0.05 --input_pins A00,A01,A02,A03,A04,A05,A06
+loadusr -Wn i2c-gpio ./python/Gpio.py --name i2c-gpio --bus_id 2 --address 32 --interval 0.05 --delay 2.5 --input_pins A00,A01,A02,A03,A04,A05,A06
 
 # Python user-mode HAL module to interface with an I2C PWM generator
-loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 70 --interval 0.1
+loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 70 --interval 0.1 --delay 2.6
 
 # Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
-loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --filter_size 10 --channels 00:none,01:epcos_B57560G1104,03:epcos_BC57560G0104F00
+loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 10 --channels 01:semitec_103GT_2,03:epcos_BC57560G0104F00
 
 net gpio-ok <= i2c-gpio.no-error
 net gpio-ok => estopchain.in-05
@@ -708,7 +708,7 @@ net e0.heaterl     <= limit1.e0-heater.out
 # Limit heater PWM to positive values
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.e0-heater.min 0.0
-setp limit1.e0-heater.max 1.0
+setp limit1.e0-heater.max 0.5
 
 # Temperature checking
 net e0.temp.set              => sum2.e0-temp-range-pos.in0
@@ -917,6 +917,7 @@ setp i2c-pwm.out-04.value  1.0
 setp i2c-pwm.out-05.value  1.0
 
 # Test
+setp i2c-pwm.out-06.value 1.0
 setp i2c-pwm.out-07.value  1.0
 
 # Pinter UI remote component
