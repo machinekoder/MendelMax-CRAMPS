@@ -62,6 +62,7 @@ updateInterval = float(args.interval)
 delayInterval = float(args.delay)
 filterSize = int(args.filter_size)
 error = True
+watchdog = True
 
 adc = ADS7828(busId=int(args.bus_id),
                 address=int(args.address))
@@ -94,10 +95,12 @@ for pin in pins:
         pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_OUT)
 halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
 halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
+halWatchdogPin = h.newpin("watchdog", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
 halErrorPin.value = error
 halNoErrorPin.value = not error
+halWatchdogPin.value = watchdog
 
 try:
     time.sleep(delayInterval)
@@ -115,7 +118,9 @@ try:
 
         halErrorPin.value = error
         halNoErrorPin.value = not error
+        watchdog = not watchdog
+        halWatchdogPin.value = watchdog
         time.sleep(updateInterval)
 except:
-    print("exiting HAL component " + args.name)
+    print(("exiting HAL component " + args.name))
     h.exit()

@@ -70,6 +70,7 @@ args = parser.parse_args()
 updateInterval = float(args.interval)
 delayInterval = float(args.delay)
 error = True
+watchdog = True
 
 gpio = MCP23017(busId=int(args.bus_id),
                 address=int(args.address))
@@ -99,17 +100,18 @@ h = hal.component(args.name)
 for pin in pins:
     if (pin.direction == MCP23017.DIR_IN):
         pin.halPin = h.newpin(getHalName(pin), hal.HAL_BIT, hal.HAL_OUT)
-        pin.halPullupPin = h.newpin(getHalName(pin) + ".pullup", hal.HAL_BIT, hal.HAL_IN)
-        pin.halInvertedPin = h.newpin(getHalName(pin) + ".invert", hal.HAL_BIT, hal.HAL_IN)
     else:
         pin.halPin = h.newpin(getHalName(pin), hal.HAL_BIT, hal.HAL_IN)
-        pin.halPullupPin = h.newpin(getHalName(pin) + ".pullup", hal.HAL_BIT, hal.HAL_IN)
+    pin.halPullupPin = h.newpin(getHalName(pin) + ".pullup", hal.HAL_BIT, hal.HAL_IN)
+    pin.halInvertedPin = h.newpin(getHalName(pin) + ".invert", hal.HAL_BIT, hal.HAL_IN)
 halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
 halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
+halWatchdogPin = h.newpin("watchdog", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
 halErrorPin.value = error
 halNoErrorPin.value = not error
+halWatchdogPin.value = watchdog
 
 try:
     time.sleep(delayInterval)
@@ -124,7 +126,7 @@ try:
                 if (pin.direction == MCP23017.DIR_IN):
                     pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
                 else:
-                    gpio.setValue(pin.port, pin.pin, pin.halPin.value())
+                    gpio.setValue(pin.port, pin.pin, (pin.halPin.value() != pin.halInvertedPin.value))
                 pullup = pin.halPullupPin.value
                 if (pullup):
                     gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
@@ -136,7 +138,9 @@ try:
 
         halErrorPin.value = error
         halNoErrorPin.value = not error
+        watchdog = not watchdog
+        halWatchdogPin.value = watchdog
         time.sleep(updateInterval)
 except:
-    print("exiting HAL component " + args.name)
+    print(("exiting HAL component " + args.name))
     h.exit()

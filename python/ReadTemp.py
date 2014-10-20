@@ -148,6 +148,8 @@ args = parser.parse_args()
 
 updateInterval = float(args.interval)
 filterSize = int(args.filter_size)
+error = False
+watchdog = True
 
 # Create pins
 pins = []
@@ -177,23 +179,35 @@ for pin in pins:
     pin.halRawPin = h.newpin(getHalName(pin) + ".raw", hal.HAL_FLOAT, hal.HAL_OUT)
     if (pin.r2temp is not None):
         pin.halValuePin = h.newpin(getHalName(pin) + ".value", hal.HAL_FLOAT, hal.HAL_OUT)
+halErrorPin = h.newpin("error", hal.HAL_BIT, hal.HAL_OUT)
+halNoErrorPin = h.newpin("no-error", hal.HAL_BIT, hal.HAL_OUT)
+halWatchdogPin = h.newpin("watchdog", hal.HAL_BIT, hal.HAL_OUT)
 h.ready()
 
-while (True):
-    try:
-        for pin in pins:
-            f = open(pin.filename, 'r')
-            value = float(f.readline())
-            pin.addSample(value)
-            pin.halRawPin.value = pin.rawValue
-            if (pin.r2temp is not None):
-                pin.halValuePin.value = adc2Temp(pin)
+halErrorPin.value = error
+halNoErrorPin.value = not error
+halWatchdogPin.value = watchdog
 
+try:
+    while (True):
+        try:
+            for pin in pins:
+                f = open(pin.filename, 'r')
+                value = float(f.readline())
+                pin.addSample(value)
+                pin.halRawPin.value = pin.rawValue
+                if (pin.r2temp is not None):
+                    pin.halValuePin.value = adc2Temp(pin)
+            error = False
+        except IOError:
+            error = True
+
+        halErrorPin.value = error
+        halNoErrorPin.value = not error
+        watchdog = not watchdog
+        halWatchdogPin.value = watchdog
         time.sleep(updateInterval)
-
-    except IOError:
-        continue
-
-    except KeyboardInterrupt:
-        raise SystemExit
+except:
+    print(("exiting HAL component " + args.name))
+    h.exit()
 
