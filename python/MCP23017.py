@@ -83,7 +83,7 @@ class MCP23017:
         self.i2c.write_byte_data(self.address, self.__MCP23017_REG_IOCON, config)
 
         # Enable all latches
-        for i in range(0, 1):
+        for i in range(0, 2):
             reg = self.portBase[i] + self.__MCP23017_REG_OLAT
             self.i2c.write_byte_data(self.address, reg, 0xFF)
 
@@ -140,12 +140,12 @@ class MCP23017:
         return values
 
     def read(self):
-        for i in range(0, 1):
+        for i in range(0, 2):
             self.port[i].value = self.readValues(i)
             self.portOld[i].value = self.port[i].value
 
     def write(self):
-        for i in range(0, 1):
+        for i in range(0, 2):
             if (self.port[i].dir != self.portOld[i].dir):
                 self.updateDir(i, self.port[i].dir)
                 self.portOld[i].dir = self.port[i].dir
