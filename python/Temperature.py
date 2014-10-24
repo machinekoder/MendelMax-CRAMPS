@@ -11,6 +11,7 @@ from R2Temp import R2Temp
 
 import argparse
 import time
+import sys
 
 import hal
 
@@ -76,12 +77,12 @@ if (args.channels != ""):
         pinRaw = channel.split(':')
         if (len(pinRaw) != 2):
             print(("wrong input"))
-            exit()
+            sys.exit(1)
         pin = Pin()
         pin.pin = int(pinRaw[0])
         if ((pin.pin > 7) or (pin.pin < 0)):
             print(("Pin not available"))
-            exit()
+            sys.exit(1)
         if (pinRaw[1] != "none"):
             pin.r2temp = R2Temp(pinRaw[1])
         pin.filterSize = filterSize

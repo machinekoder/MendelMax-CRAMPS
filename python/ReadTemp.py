@@ -160,12 +160,12 @@ if (args.channels != ""):
         pinRaw = channel.split(':')
         if (len(pinRaw) != 2):
             print(("wrong input"))
-            exit()
+            sys.exit(1)
         pin = Pin()
         pin.pin = int(pinRaw[0])
         if ((pin.pin > 5) or (pin.pin < 0)):
             print(("Pin not available"))
-            exit()
+            sys.exit(1)
         checkAdcInput(pin)
         if (pinRaw[1] != "none"):
             pin.r2temp = R2Temp(pinRaw[1])
