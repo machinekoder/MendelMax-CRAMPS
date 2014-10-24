@@ -10,6 +10,7 @@ from MCP23017 import MCP23017
 
 import argparse
 import time
+import sys
 
 import hal
 
@@ -28,7 +29,7 @@ class Pin:
 def parseInputPin(pinRaw, direction):
     if (len(pinRaw) != 3):
         print(("wrong input"))
-        exit()
+        sys.exit(1)
 
     pin = Pin()
     if (pinRaw[0] == 'A'):
@@ -37,7 +38,7 @@ def parseInputPin(pinRaw, direction):
         pin.port = MCP23017.PORT_B
     else:
         print(("wrong port input"))
-        exit()
+        sys.exit(1)
     pin.pin = int(pinRaw[1:3])
     pin.direction = direction
     return pin
@@ -89,11 +90,7 @@ if (args.input_pins != ""):
 
 if (len(pins) == 0):
     print(("No pins specified"))
-    exit()
-
-# Initialize GPIO device
-for pin in pins:
-    gpio.setDir(pin.port, pin.pin, pin.direction)
+    sys.exit(1)
 
 # Initialize HAL
 h = hal.component(args.name)
@@ -123,10 +120,11 @@ try:
 
             gpio.read()  # read
             for pin in pins:
+                gpio.setDir(pin.port, pin.pin, pin.direction)
                 if (pin.direction == MCP23017.DIR_IN):
                     pin.halPin.value = gpio.getValue(pin.port, pin.pin) != pin.halInvertedPin.value
                 else:
-                    gpio.setValue(pin.port, pin.pin, (pin.halPin.value() != pin.halInvertedPin.value))
+                    gpio.setValue(pin.port, pin.pin, pin.halPin.value != pin.halInvertedPin.value)
                 pullup = pin.halPullupPin.value
                 if (pullup):
                     gpio.setPullup(pin.port, pin.pin, MCP23017.PULLUP_EN)
