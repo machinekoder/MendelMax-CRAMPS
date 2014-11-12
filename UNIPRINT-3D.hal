@@ -1116,7 +1116,7 @@ net l0.w-out => i2c-pwm.out-14.value
 setp i2c-pwm.out-15.enable 1
 setp i2c-pwm.out-15.value  0.0
 
-setp i2c-pwm.frequency 1000
+setp i2c-pwm.frequency 100
 
 # ##################################################
 # GPIO
