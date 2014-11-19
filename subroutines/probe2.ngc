@@ -1,6 +1,6 @@
 o<probe2> sub
     G0 Z1
     M64 P00
-    G38.2 Z-1.5 F30
+    G38.2 Z-3.0 F30
     M65 P00
 o<probe2> end sub 

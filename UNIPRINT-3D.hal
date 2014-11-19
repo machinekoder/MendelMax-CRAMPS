@@ -105,11 +105,11 @@ addf   [PRUCONF](DRIVER).update             servo-thread
 addf   bb_gpio.write                        servo-thread
 
 
-addf   charge-pump                          run-thread
-#addf led-dim.led-r.update                     run-thread
-#addf led-dim.led-g.update                     run-thread
-#addf led-dim.led-b.update                     run-thread
-#addf led-dim.led-w.update                     run-thread
+#addf   charge-pump                          run-thread
+addf led-dim.led-r.update                     run-thread
+addf led-dim.led-g.update                     run-thread
+addf led-dim.led-b.update                     run-thread
+addf led-dim.led-w.update                     run-thread
 
 
 addf   thermistor-check.e0                  check-thread
@@ -154,7 +154,7 @@ newsig temp-watchdog bit
 loadusr -Wn i2c-gpio ./python/Gpio.py --name i2c-gpio --bus_id 2 --address 32 --interval 0.05 --delay 2.5 --input_pins A00,A01,A02,A03,A04,A05,A06,A07,B06,B07 --output_pins B00,B01,B02,B03,B04,B05
 
 # Python user-mode HAL module to interface with an I2C PWM generator
-loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 70 --interval 0.1 --delay 2.6
+loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 67 --interval 0.1 --delay 2.6
 
 # Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
 loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 10 --channels 00:epcos_BC57560G0104F00,01:semitec_103GT_2,02:semitec_103GT_2,03:semitec_103GT_2,04:semitec_103GT_2,05:none,06:none,07:none
@@ -619,6 +619,7 @@ newsig e0.temp.range.min         float
 newsig e0.temp.range.lowpassgain float
 newsig e0.temp.in_range          bit
 newsig e0.temp.pwm               float
+newsig e0.temp.pwm.max           float
 newsig e0.temp.limit.low         float
 newsig e0.temp.limit.high        float
 newsig e0.temp.in_limit          bit
@@ -634,6 +635,7 @@ newsig hb.temp.range.max        float
 newsig hb.temp.range.min        float
 newsig hb.temp.in_range         bit
 newsig hb.temp.pwm              float
+newsig hb.temp.pwm.max          float
 newsig hb.temp.limit.low        float
 newsig hb.temp.limit.high       float
 newsig hb.temp.in_limit         bit
@@ -656,6 +658,9 @@ net e0.heaterl     <= limit1.e0-heater.out
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.e0-heater.min 0.0
 setp limit1.e0-heater.max 0.5
+#net e0.temp.pwm.max => limit1.e0-heater.max
+net e0.temp.pwm.max => pid.e0-temp.maxoutput
+sets e0.temp.pwm.max 0.5
 
 # Temperature checking
 net e0.temp.set              => sum2.e0-temp-range-pos.in0
@@ -703,7 +708,6 @@ setp pid.e0-temp.Igain     0.00001
 setp pid.e0-temp.Dgain     1.5
 setp pid.e0-temp.maxerrorI 1.0
 setp pid.e0-temp.bias      0.15
-setp pid.e0-temp.maxoutput 1.0
 
 # Parameters
 sets e0.temp.range.pos_error 1.0
@@ -731,7 +735,10 @@ net hb.heaterl      <= limit1.hb-heater.out
 # Limit heater PWM to positive values
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.hb-heater.min 0
-setp limit1.hb-heater.max 0.9
+setp limit1.hb-heater.max 0.7
+#net hb.temp.pwm.max => limit1.hb-heater.max
+net hb.temp.pwm.max => pid.hb-temp.maxoutput
+sets hb.temp.pwm.max 0.7
 
 # Temperature checking
 net hb.temp.set              => sum2.hb-temp-range-pos.in0
@@ -1028,7 +1035,7 @@ setp i2c-gpio.B.in-06.pullup 0
 setp i2c-gpio.B.in-07.pullup 0
 
 # ##################################################
-# GPIO
+# ADC
 # ##################################################
 net hb.temp.meas        <= i2c-temp.ch-00.value
 net e0.temp.meas        <= i2c-temp.ch-01.value
@@ -1078,8 +1085,10 @@ setp watchdog.timeout-2 0.1
 net estop-out => watchdog.enable-in
 
 # drive estop-sw
-net charge-pump-out charge-pump.out => bb_gpio.p8.out-19
-net estop-out => charge-pump.enable
+#net charge-pump-out charge-pump.out => bb_gpio.p8.out-19
+#net estop-out => charge-pump.enable
+net estop-out => bb_gpio.p8.out-19
+setp bb_gpio.p8.out-19.invert 1
 
 # ##################################################
 # UI
