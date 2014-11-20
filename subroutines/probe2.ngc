@@ -1,5 +1,5 @@
 o<probe2> sub
-    G0 Z1
+    G0 Z2.0
     M64 P00
     G38.2 Z-3.0 F30
     M65 P00
