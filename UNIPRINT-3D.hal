@@ -7,7 +7,7 @@
 # ########################################
 
 # start haltalk server
-loadusr -W haltalk --ini haltalk.ini
+loadusr -W haltalk
 
 # ###################################
 # Core EMC/HAL Loads
