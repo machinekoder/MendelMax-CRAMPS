@@ -50,12 +50,17 @@ The output value can be tuned using the the factor input
 """;
 license "GPL";
 variable float basis = 1.0;
+variable u32   lastInput = 0;
 ;;
 #include <math.h>
 
 FUNCTION(update) {
     float value;
-    basis = pow((float)max_pwm/(float)factor, 1.0 / (float)(steps-1));
-    value = (factor*pow(basis, (float)input))/((float)(max_pwm));
-    output = (value > 1.0) ? 1.0 : value;
+    if (lastInput != input) 
+    {
+        basis = pow((float)max_pwm/(float)factor, 1.0 / (float)(steps-1));
+        value = (factor*pow(basis, (float)input))/((float)(max_pwm));
+        output = (value > 1.0) ? 1.0 : value;
+        lastInput = input;
+    }
 }
