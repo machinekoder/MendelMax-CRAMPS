@@ -27,7 +27,7 @@ loadrt gantry names=gantry.z personality=2
 
 # load low-level drivers
 loadrt hal_bb_gpio output_pins=107,119,126,226 input_pins=241
-loadrt [PRUCONF](DRIVER) prucode=$(LINUXCNC_HOME)/[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
+loadrt [PRUCONF](DRIVER) prucode=[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
 
 # other components
 loadrt pid names=pid.e0-temp,pid.hb-temp
