@@ -40,7 +40,7 @@ component led_dim "LinuxCNC HAL component for dimming LEDs";
 pin in  u32   steps "Input steps";
 pin in  u32   max_pwm "PWM steps (usually 2^n)";
 pin in  float factor "The dim factor";
-pin in  u32   input "Input value";
+pin in  float input "Input value -> 0 to 1";
 pin out float output "Output value -> 0 to 1";
 function update  fp "Update the output value";
 description """
@@ -50,7 +50,7 @@ The output value can be tuned using the the factor input
 """;
 license "GPL";
 variable float basis = 1.0;
-variable u32   lastInput = 0;
+variable float lastInput = 0;
 ;;
 #include <math.h>
 
@@ -59,7 +59,7 @@ FUNCTION(update) {
     if (lastInput != input) 
     {
         basis = pow((float)max_pwm/(float)factor, 1.0 / (float)(steps-1));
-        value = (factor*pow(basis, (float)input))/((float)(max_pwm));
+        value = (factor*pow(basis, input*(float)steps))/((float)(max_pwm));
         output = (value > 1.0) ? 1.0 : value;
         lastInput = input;
     }

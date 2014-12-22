@@ -167,6 +167,45 @@ net gpio-watchdog <= i2c-gpio.watchdog
 net pwm-watchdog <= i2c-pwm.watchdog
 net temp-watchdog <= i2c-temp.watchdog
 
+# ###################################
+# UI definition and defaults
+# ###################################
+
+# Pinter UI remote component
+newcomp printerui timer=100 acceptdefaults
+newpin printerui printerui.e0.temp.meas float in
+newpin printerui printerui.e0.temp.set float in
+newpin printerui printerui.hb.temp.meas float in
+newpin printerui printerui.hb.temp.set float in
+newpin printerui printerui.e0.fan.pwm float in
+ready printerui
+
+newcomp fdm-e0 timer=100 acceptdefaults
+newpin fdm-e0 fdm-e0.temp.meas float in
+newpin fdm-e0 fdm-e0.temp.set float in
+ready fdm-e0
+
+newcomp fdm-hb timer=100 acceptdefaults
+newpin fdm-hb fdm-hb.temp.meas float in
+newpin fdm-hb fdm-hb.temp.set float in
+ready fdm-hb
+
+newcomp fdm-f0 timer=100 acceptdefaults
+newpin fdm-f0 fdm-f0.pwm.set float in
+ready fdm-f0
+
+newcomp fdm-led timer=100 acceptdefaults
+newpin fdm-led fdm-led.color.r float out
+newpin fdm-led fdm-led.color.g float out
+newpin fdm-led fdm-led.color.b float out
+newpin fdm-led fdm-led.color.w float out
+ready  fdm-led
+
+setp fdm-led.color.r 1.0
+setp fdm-led.color.g 1.0
+setp fdm-led.color.b 1.0
+setp fdm-led.color.w 1.0
+
 # wait the halcmd script until the UI has created the remote component 'pidctrl':
 # waitexists pidctrl
 
@@ -192,21 +231,6 @@ setp pidctrl.Igain     0.00003
 setp pidctrl.Dgain     0.0001
 setp pidctrl.maxerrorI 0.2
 setp pidctrl.bias      0.09
-
-newcomp ledctrl timer=100 acceptdefaults
-newpin ledctrl ledctrl.color.r            u32 out
-newpin ledctrl ledctrl.color.g            u32 out
-newpin ledctrl ledctrl.color.b            u32 out
-newpin ledctrl ledctrl.color.a            u32 out
-newpin ledctrl ledctrl.color.h            float out
-newpin ledctrl ledctrl.color.s            float out
-newpin ledctrl ledctrl.color.v            float out
-ready  ledctrl
-
-setp ledctrl.color.r 255
-setp ledctrl.color.g 255
-setp ledctrl.color.b 255
-setp ledctrl.color.a 255
 
 newcomp extruderctrl timer=100 acceptdefaults
 newpin extruderctrl extruderctrl.enable         bit out
@@ -826,24 +850,24 @@ newsig led.r   float
 newsig led.g   float
 newsig led.b   float
 newsig led.w   float
-newsig led.r_in u32
-newsig led.g_in u32
-newsig led.b_in u32
-newsig led.w_in u32
+newsig led.r-in float
+newsig led.g-in float
+newsig led.b-in float
+newsig led.w-in float
 
 net led.r <= led-dim.led-r.output
 net led.g <= led-dim.led-g.output
 net led.b <= led-dim.led-b.output
 net led.w <= led-dim.led-w.output
 
-net led.r_in <= ledctrl.color.r
-net led.r_in => led-dim.led-r.input
-net led.g_in <= ledctrl.color.g
-net led.g_in => led-dim.led-g.input
-net led.b_in <= ledctrl.color.b
-net led.b_in => led-dim.led-b.input
-net led.w_in <= ledctrl.color.a
-net led.w_in => led-dim.led-w.input
+net led.r-in <= fdm-led.color.r
+net led.r-in => led-dim.led-r.input
+net led.g-in <= fdm-led.color.g
+net led.g-in => led-dim.led-g.input
+net led.b-in <= fdm-led.color.b
+net led.b-in => led-dim.led-b.input
+net led.w-in <= fdm-led.color.w
+net led.w-in => led-dim.led-w.input
 
 setp led-dim.led-r.factor 5.0
 setp led-dim.led-r.steps  256
@@ -1091,23 +1115,20 @@ net estop-out => bb_gpio.p8.out-19
 setp bb_gpio.p8.out-19.invert 1
 
 # ##################################################
-# UI
+# UI linking
 # ##################################################
-
-# Pinter UI remote component
-newcomp printerui timer=100 acceptdefaults
-newpin printerui printerui.e0.temp.meas float in
-newpin printerui printerui.e0.temp.set float in
-newpin printerui printerui.hb.temp.meas float in
-newpin printerui printerui.hb.temp.set float in
-newpin printerui printerui.e0.fan.pwm float in
-ready printerui
 
 net e0.temp.meas => printerui.e0.temp.meas
 net e0.temp.set => printerui.e0.temp.set
 net hb.temp.meas => printerui.hb.temp.meas
 net hb.temp.set => printerui.hb.temp.set
 net e0.fan.pwm => printerui.e0.fan.pwm
+
+net e0.temp.meas => fdm-e0.temp.meas
+net e0.temp.set => fdm-e0.temp.set
+net hb.temp.meas => fdm-hb.temp.meas
+net hb.temp.set => fmd-hb.temp.set
+net e0.fan.pwm => fdm-f0.pwm.set
 
 # monitor the estop error sources
 newg error-sources 100
