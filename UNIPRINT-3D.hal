@@ -1127,7 +1127,7 @@ net e0.fan.pwm => printerui.e0.fan.pwm
 net e0.temp.meas => fdm-e0.temp.meas
 net e0.temp.set => fdm-e0.temp.set
 net hb.temp.meas => fdm-hb.temp.meas
-net hb.temp.set => fmd-hb.temp.set
+net hb.temp.set => fdm-hb.temp.set
 net e0.fan.pwm => fdm-f0.pwm.set
 
 # monitor the estop error sources
