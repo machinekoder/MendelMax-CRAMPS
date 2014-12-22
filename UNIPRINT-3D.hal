@@ -171,40 +171,43 @@ net temp-watchdog <= i2c-temp.watchdog
 # UI definition and defaults
 # ###################################
 
-# Pinter UI remote component
-newcomp printerui timer=100 acceptdefaults
-newpin printerui printerui.e0.temp.meas float in
-newpin printerui printerui.e0.temp.set float in
-newpin printerui printerui.hb.temp.meas float in
-newpin printerui printerui.hb.temp.set float in
-newpin printerui printerui.e0.fan.pwm float in
-ready printerui
-
 newcomp fdm-e0 timer=100 acceptdefaults
 newpin fdm-e0 fdm-e0.temp.meas float in
-newpin fdm-e0 fdm-e0.temp.set float in
+newpin fdm-e0 fdm-e0.temp.set  float in
+newpin fdm-e0 fdm-e0.enable    bit   in
 ready fdm-e0
+
+setp fdm-e0.enable 1
 
 newcomp fdm-hb timer=100 acceptdefaults
 newpin fdm-hb fdm-hb.temp.meas float in
-newpin fdm-hb fdm-hb.temp.set float in
+newpin fdm-hb fdm-hb.temp.set  float in
+newpin fdm-hb fdm-hb.enable    bit   in
 ready fdm-hb
+
+setp fdm-hb.enable 1
 
 newcomp fdm-f0 timer=100 acceptdefaults
 newpin fdm-f0 fdm-f0.pwm.set float in
+newpin fdm-f0 fdm-f0.enable  bit   in
 ready fdm-f0
 
-newcomp fdm-led timer=100 acceptdefaults
-newpin fdm-led fdm-led.color.r float out
-newpin fdm-led fdm-led.color.g float out
-newpin fdm-led fdm-led.color.b float out
-newpin fdm-led fdm-led.color.w float out
-ready  fdm-led
+setp fdm-f0.enable 1
 
-setp fdm-led.color.r 1.0
-setp fdm-led.color.g 1.0
-setp fdm-led.color.b 1.0
-setp fdm-led.color.w 1.0
+newcomp fdm-l0 timer=100 acceptdefaults
+newpin fdm-l0 fdm-l0.color.r float out
+newpin fdm-l0 fdm-l0.color.g float out
+newpin fdm-l0 fdm-l0.color.b float out
+newpin fdm-l0 fdm-l0.color.w float out
+newpin fdm-l0 fdm-l0.enable  bit   in
+ready  fdm-l0
+
+setp fdm-l0.enable 1
+
+setp fdm-l0.color.r 1.0
+setp fdm-l0.color.g 1.0
+setp fdm-l0.color.b 1.0
+setp fdm-l0.color.w 1.0
 
 # wait the halcmd script until the UI has created the remote component 'pidctrl':
 # waitexists pidctrl
@@ -860,13 +863,13 @@ net led.g <= led-dim.led-g.output
 net led.b <= led-dim.led-b.output
 net led.w <= led-dim.led-w.output
 
-net led.r-in <= fdm-led.color.r
+net led.r-in <= fdm-l0.color.r
 net led.r-in => led-dim.led-r.input
-net led.g-in <= fdm-led.color.g
+net led.g-in <= fdm-l0.color.g
 net led.g-in => led-dim.led-g.input
-net led.b-in <= fdm-led.color.b
+net led.b-in <= fdm-l0.color.b
 net led.b-in => led-dim.led-b.input
-net led.w-in <= fdm-led.color.w
+net led.w-in <= fdm-l0.color.w
 net led.w-in => led-dim.led-w.input
 
 setp led-dim.led-r.factor 5.0
@@ -1117,12 +1120,6 @@ setp bb_gpio.p8.out-19.invert 1
 # ##################################################
 # UI linking
 # ##################################################
-
-net e0.temp.meas => printerui.e0.temp.meas
-net e0.temp.set => printerui.e0.temp.set
-net hb.temp.meas => printerui.hb.temp.meas
-net hb.temp.set => printerui.hb.temp.set
-net e0.fan.pwm => printerui.e0.fan.pwm
 
 net e0.temp.meas => fdm-e0.temp.meas
 net e0.temp.set => fdm-e0.temp.set
