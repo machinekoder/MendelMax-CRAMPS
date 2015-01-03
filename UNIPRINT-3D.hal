@@ -1225,10 +1225,10 @@ net l0.g               <=> fdm-l0.g
 net l0.b               <=> fdm-l0.b
 net l0.w               <=> fdm-l0.w
 
-setp fdm-l0.r 1.0
-setp fdm-l0.g 1.0
-setp fdm-l0.b 1.0
-setp fdm-l0.w 1.0
+sets l0.r 1.0
+sets l0.g 1.0
+sets l0.b 1.0
+sets l0.w 1.0
 
 # monitor the estop error sources
 newg error-sources 100
