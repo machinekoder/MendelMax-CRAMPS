@@ -540,7 +540,7 @@ net home-z       => mux-gen.00.in-bit-03
 net probe.muxed  => and2.probe.in0
 net probe.enable => and2.probe.in1
 net probe.input  <= and2.probe.out
-net probe.input  => motion.probe.input
+net probe.input  => motion.probe-input
 
 
 # ##################################################
