@@ -42,7 +42,8 @@ loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range
 loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
 loadrt and2 names=and2.probe,and2.e0-no-error,and2.hbp-no-error
 loadrt mux2 names=mux2.e0-speed-out,mux2.exp0-pwm
-loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
+#loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
+loadrt in2io personality=51 names=in2io-motion
 loadrt logic names=estopchain personality=0x108 # and 8 inputs
 loadrt comp names=comp.exp0-temp,comp.hbp-hot
 loadrt select8 names=select8.extruder
@@ -58,6 +59,7 @@ addf   f2u.probe.sel                        servo-thread
 addf   mux-gen.00                           servo-thread
 addf   and2.probe                           servo-thread
 addf   motion-controller                    servo-thread
+addf   in2io-motion                         servo-thread
 # HBP
 addf   sum2.hbp-temp-range-neg              servo-thread
 addf   sum2.hbp-temp-range-pos              servo-thread
@@ -67,7 +69,6 @@ addf   not.hbp-temp-range                   servo-thread
 addf   wcomp.hbp-temp-limit                 servo-thread
 addf   pid.hbp-temp.do-pid-calcs            servo-thread
 addf   limit1.hbp-heater                    servo-thread
-addf   in2io.hbp-temp-set                   servo-thread
 addf   and2.hbp-no-error                    servo-thread
 # E0
 addf   pid.e0-temp.do-pid-calcs             servo-thread
@@ -78,25 +79,16 @@ addf   lowpass.e0-temp-range                servo-thread
 addf   wcomp.e0-temp-range                  servo-thread
 addf   not.e0-temp-range                    servo-thread
 addf   wcomp.e0-temp-limit                  servo-thread
-addf   in2io.e0-temp-set                    servo-thread
 addf   and2.e0-no-error                     servo-thread
 # F0
-addf   in2io.f0-set                         servo-thread
 addf   scale.f0                             servo-thread
 # F1
-addf   in2io.f1-set                         servo-thread
 addf   scale.f1                             servo-thread
 # F2
-addf   in2io.f2-set                         servo-thread
 addf   scale.f2                             servo-thread
 # F3
-addf   in2io.f3-set                         servo-thread
 addf   scale.f3                             servo-thread
 # L0
-addf   in2io.l0-r                           servo-thread
-addf   in2io.l0-g                           servo-thread
-addf   in2io.l0-b                           servo-thread
-addf   in2io.l0-w                           servo-thread
 addf   led-dim.l0-r                         servo-thread
 addf   led-dim.l0-g                         servo-thread
 addf   led-dim.l0-b                         servo-thread
@@ -535,40 +527,6 @@ newsig p3.y-program   float
 newsig p3.x-trigger   bit
 newsig p3.y-trigger   bit
 
-net probe.offset.x-program => in2io.probe-offset-x.in
-net probe.offset.x-trigger => in2io.probe-offset-x.trigger
-net probe.offset.x         <= in2io.probe-offset-x.io
-net probe.offset.y-program => in2io.probe-offset-y.in
-net probe.offset.y-trigger => in2io.probe-offset-y.trigger
-net probe.offset.y         <= in2io.probe-offset-y.io
-net probe.offset.z-program => in2io.probe-offset-z.in
-net probe.offset.z-trigger => in2io.probe-offset-z.trigger
-net probe.offset.z         <= in2io.probe-offset-z.io
-net p0.x-program => in2io.p0-x.in
-net p0.x-trigger => in2io.p0-x.trigger
-net p0.x         <= in2io.p0-x.io
-net p0.y-program => in2io.p0-y.in
-net p0.y-trigger => in2io.p0-y.trigger
-net p0.y         <= in2io.p0-y.io
-net p1.x-program => in2io.p1-x.in
-net p1.x-trigger => in2io.p1-x.trigger
-net p1.x         <= in2io.p1-x.io
-net p1.y-program => in2io.p1-y.in
-net p1.y-trigger => in2io.p1-y.trigger
-net p1.y         <= in2io.p1-y.io
-net p2.x-program => in2io.p2-x.in
-net p2.x-trigger => in2io.p2-x.trigger
-net p2.x         <= in2io.p2-x.io
-net p2.y-program => in2io.p2-y.in
-net p2.y-trigger => in2io.p2-y.trigger
-net p2.y         <= in2io.p2-y.io
-net p3.x-program => in2io.p3-x.in
-net p3.x-trigger => in2io.p3-x.trigger
-net p3.x         <= in2io.p3-x.io
-net p3.y-program => in2io.p3-y.in
-net p3.y-trigger => in2io.p3-y.trigger
-net p3.y         <= in2io.p3-y.io
-
 net probe.sel-f => f2u.probe-sel.in
 net probe.sel  <= f2u.probe-sel.out
 
@@ -666,11 +624,6 @@ net e0.temp.measl                => wcomp.e0-temp-range.in
 #this needs to be coupled to a digital input for M66 readout
 net e0.temp.in-range <= wcomp.e0-temp-range.out
 
-# buffer program input
-net e0.temp.set-program => in2io.e0-temp-set.in
-net e0.temp.set-trigger => in2io.e0-temp-set.trigger
-net e0.temp.set         <= in2io.e0-temp-set.io
-
 # limit the output temperature to prevent damage when thermistor is broken/removed
 net e0.temp.limit.min         => wcomp.e0-temp-limit.min
 net e0.temp.limit.max        => wcomp.e0-temp-limit.max
@@ -743,11 +696,6 @@ net hbp.temp.meas                 => wcomp.hbp-temp-range.in
 #the output of wcomp.e0-temp-range will say if measured temperature is in range of set value
 #this needs to be coupled to a digital input for M66 readout
 net hbp.temp.in-range <= wcomp.hbp-temp-range.out
-
-# buffer program input
-net hbp.temp.set-program => in2io.hbp-temp-set.in
-net hbp.temp.set-trigger => in2io.hbp-temp-set.trigger
-net hbp.temp.set         <= in2io.hbp-temp-set.io
 
 # limit the output temperature to prevent damage when thermistor is broken/removed
 net hbp.temp.limit.min         => wcomp.hbp-temp-limit.min
@@ -836,20 +784,6 @@ newsig l0.g-out       float
 newsig l0.b-out       float
 newsig l0.w-out       float
 
-# buffer program input
-net l0.r-program => in2io.l0-r.in
-net l0.r-trigger => in2io.l0-r.trigger
-net l0.r         <= in2io.l0-r.io
-net l0.g-program => in2io.l0-g.in
-net l0.g-trigger => in2io.l0-g.trigger
-net l0.g         <= in2io.l0-g.io
-net l0.b-program => in2io.l0-b.in
-net l0.b-trigger => in2io.l0-b.trigger
-net l0.b         <= in2io.l0-b.io
-net l0.w-program => in2io.l0-w.in
-net l0.w-trigger => in2io.l0-w.trigger
-net l0.w         <= in2io.l0-w.io
-
 net l0.r-out <= led-dim.l0-r.output
 net l0.g-out <= led-dim.l0-g.output
 net l0.b-out <= led-dim.l0-b.output
@@ -895,10 +829,6 @@ newsig f0.set-program   float
 newsig f0.set-trigger   bit
 newsig f0.pwm           float
 # ---------------------------
-net f0.set-program => in2io.f0-set.in
-net f0.set-trigger => in2io.f0-set.trigger
-net f0.set         <= in2io.f0-set.io
-
 setp scale.f0.gain 0.00392156862745
 net f0.set => scale.f0.in
 net f0.pwm <= scale.f0.out
@@ -910,10 +840,6 @@ newsig f1.set-program   float
 newsig f1.set-trigger   bit
 newsig f1.pwm           float
 # ---------------------------
-net f1.set-program => in2io.f1-set.in
-net f1.set-trigger => in2io.f1-set.trigger
-net f1.set         <= in2io.f1-set.io
-
 setp scale.f1.gain 0.00392156862745
 net f1.set => scale.f1.in
 net f1.pwm <= scale.f1.out
@@ -925,10 +851,6 @@ newsig f2.set-program   float
 newsig f2.set-trigger   bit
 newsig f2.pwm           float
 # ---------------------------
-net f2.set-program => in2io.f2-set.in
-net f2.set-trigger => in2io.f2-set.trigger
-net f2.set         <= in2io.f2-set.io
-
 setp scale.f2.gain 0.00392156862745
 net f2.set => scale.f2.in
 net f2.pwm <= scale.f2.out
@@ -940,10 +862,6 @@ newsig f3.set-program   float
 newsig f3.set-trigger   bit
 newsig f3.pwm           float
 # ---------------------------
-net f3.set-program => in2io.f3-set.in
-net f3.set-trigger => in2io.f3-set.trigger
-net f3.set         <= in2io.f3-set.io
-
 setp scale.f3.gain 0.00392156862745
 net f3.set => scale.f3.in
 net f3.pwm <= scale.f3.out
@@ -1181,18 +1099,80 @@ net p2.x                 => motion.analog-in-47
 net p2.y                 => motion.analog-in-48
 net p3.x                 => motion.analog-in-49
 net p3.y                 => motion.analog-in-50
-setp motion.analog-in-38 [PROBE]COUNT
-setp motion.analog-in-39 [PROBE]SEARCH_VEL
 sets probe.offset.x      [PROBE]OFFSET_X
 sets probe.offset.y      [PROBE]OFFSET_Y
 sets probe.offset.z      [PROBE]OFFSET_Z
-setp motion.analog-in-53 [AXIS_0]MIN_LIMIT
-setp motion.analog-in-54 [AXIS_1]MIN_LIMIT
-setp motion.analog-in-55 [AXIS_2]MIN_LIMIT
 
 net hbp.temp.in-range   => motion.digital-in-00
-#net hbc.temp.in-range   => motion.digital-in-00
+#net hbc.temp.in-range   => motion.digital-in-01
 net e0.temp.in-range    => motion.digital-in-02
+
+net hbp.temp.set-program => in2io-motion.in.00
+net hbp.temp.set-trigger => in2io-motion.trigger.00
+net hbp.temp.set         <= in2io-motion.io.00
+#net hbc.temp.set-program => in2io-motion.in.01
+#net hbc.temp.set-trigger => in2io-motion.trigger.01
+#net hbc.temp.set         <= in2io-motion.io.01
+net e0.temp.set-program => in2io-motion.in.02
+net e0.temp.set-trigger => in2io-motion.trigger.02
+net e0.temp.set         <= in2io-motion.io.02
+net f0.set-program      => in2io-motion.in.12
+net f0.set-trigger      => in2io-motion.trigger.12
+net f0.set              <= in2io-motion.io.12
+net f1.set-program      => in2io-motion.in.13
+net f1.set-trigger      => in2io-motion.trigger.13
+net f1.set              <= in2io-motion.io.13
+net f2.set-program      => in2io-motion.in.14
+net f2.set-trigger      => in2io-motion.trigger.14
+net f2.set              <= in2io-motion.io.14
+net f3.set-program      => in2io-motion.in.15
+net f3.set-trigger      => in2io-motion.trigger.15
+net f3.set              <= in2io-motion.io.15
+net l0.r-program        => in2io-motion.in.26
+net l0.r-trigger        => in2io-motion.trigger.26
+net l0.r                <= in2io-motion.io.26
+net l0.g-program        => in2io-motion.in.27
+net l0.g-trigger        => in2io-motion.trigger.27
+net l0.g                <= in2io-motion.io.27
+net l0.b-program        => in2io-motion.in.28
+net l0.b-trigger        => in2io-motion.trigger.28
+net l0.b                <= in2io-motion.io.28
+net l0.w-program        => in2io-motion.in.29
+net l0.w-trigger        => in2io-motion.trigger.29
+net l0.w                <= in2io-motion.io.29
+net probe.offset.x-program => in2io-motion.in.40
+net probe.offset.x-trigger => in2io-motion.trigger.40
+net probe.offset.x         <= in2io-motion.io.40
+net probe.offset.y-program => in2io-motion.in.41
+net probe.offset.y-trigger => in2io-motion.trigger.41
+net probe.offset.y         <= in2io-motion.io.41
+net probe.offset.z-program => in2io-motion.in.42
+net probe.offset.z-trigger => in2io-motion.trigger.42
+net probe.offset.z         <= in2io-motion.io.42
+net p0.x-program        => in2io-motion.in.43
+net p0.x-trigger        => in2io-motion.trigger.43
+net p0.x                <= in2io-motion.io.43
+net p0.y-program        => in2io-motion.in.44
+net p0.y-trigger        => in2io-motion.trigger.44
+net p0.y                <= in2io-motion.io.44
+net p1.x-program        => in2io-motion.in.45
+net p1.x-trigger        => in2io-motion.trigger.45
+net p1.x                <= in2io-motion.io.45
+net p1.y-program        => in2io-motion.in.46
+net p1.y-trigger        => in2io-motion.trigger.46
+net p1.y                <= in2io-motion.io.46
+net p2.x-program        => in2io-motion.in.47
+net p2.x-trigger        => in2io-motion.trigger.47
+net p2.x                <= in2io-motion.io.47
+net p2.y-program        => in2io-motion.in.48
+net p2.y-trigger        => in2io-motion.trigger.48
+net p2.y                <= in2io-motion.io.48
+net p3.x-program        => in2io-motion.in.49
+net p3.x-trigger        => in2io-motion.trigger.49
+net p3.x                <= in2io-motion.io.49
+net p3.y-program        => in2io-motion.in.50
+net p3.y-trigger        => in2io-motion.trigger.50
+net p3.y                <= in2io-motion.io.50
 
 # ##################################################
 # Estop chain, watchdog and charge-pump

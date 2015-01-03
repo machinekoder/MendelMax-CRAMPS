@@ -38,9 +38,9 @@
  ******************************************************************************/
 
 component in2io "LinuxCNC HAL component for coverting a input to a IO pin";
-pin in  float   in "Input";
-pin io  float   io "I/O";
-pin in  bit     trigger "Trigger for updating the input value";
+pin in  float   in.## [64 : personality] "Input";
+pin io  float   io.## [64 : personality] "I/O";
+pin in  bit     trigger.## [64 : personality] "Trigger for updating the input value";
 function _  fp "Update the output value";
 description """
 LinuxCNC HAL component for coverting a input to a IO pin
@@ -48,12 +48,16 @@ LinuxCNC HAL component for coverting a input to a IO pin
 input is output
 """;
 license "GPL";
-variable int prev_trigger = 0;
+variable int prev_trigger[64] = 0;
 ;;
 
 FUNCTION(_) {
-    if (trigger ^ prev_trigger) {
-        io = in;
-        prev_trigger = trigger;
+    int i;
+
+    for (i = 0; i < personality; i++) {
+        if (trigger(i) ^ prev_trigger[i]) {
+            io(i) = in(i);
+            prev_trigger[i] = trigger(i);
+        }
     }
 }
