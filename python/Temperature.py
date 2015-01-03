@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # encoding: utf-8
 """
-mperature.py
+Temperature.py
 
 Created by Alexander Rössler on 2014-03-24.
 """

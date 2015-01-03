@@ -134,6 +134,9 @@ loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 67 --int
 # Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
 loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 10 --channels 00:[HBP]THERMISTOR,01:[EXTRUDER_0]THERMISTOR,02:semitec_103GT_2,03:semitec_103GT_2,04:semitec_103GT_2,05:none,06:none,07:none
 
+# Python user-mode HAL module for storing values
+loadusr -Wn storage ./python/Storage.py -n storage -f storage.ini -a
+
 net gpio-ok <= i2c-gpio.no-error
 net pwm-ok <= i2c-pwm.no-error
 net temp-ok <= i2c-temp.no-error
@@ -1225,10 +1228,10 @@ net l0.g               <=> fdm-l0.g
 net l0.b               <=> fdm-l0.b
 net l0.w               <=> fdm-l0.w
 
-sets l0.r 1.0
-sets l0.g 1.0
-sets l0.b 1.0
-sets l0.w 1.0
+net l0.r               <=> storage.l0.r
+net l0.g               <=> storage.l0.g
+net l0.b               <=> storage.l0.b
+net l0.w               <=> storage.l0.w
 
 # monitor the estop error sources
 newg error-sources 100
