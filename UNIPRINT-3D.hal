@@ -41,7 +41,7 @@ loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,
 loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range
 loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
 loadrt and2 names=and2.probe,and2.e0-no-error,and2.hbp-no-error
-loadrt mux2 names=mux2.e0-speed-out,mux2.exp0-pwm
+loadrt mux2 names=mux2.exp0-pwm
 #loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
 loadrt in2io personality=51 names=in2io-motion
 loadrt logic names=estopchain personality=0x108 # and 8 inputs
@@ -99,9 +99,6 @@ addf   mux2.exp0-pwm                        servo-thread
 addf   select8.extruder                     servo-thread
 addf   comp.hbp-hot                         servo-thread
 
-# control from HAL
-addf   mux2.e0-speed-out                    servo-thread
-
 # Estop chain
 addf   watchdog.set-timeouts                servo-thread
 addf   watchdog.process                     servo-thread
@@ -135,7 +132,7 @@ loadusr -Wn i2c-gpio ./python/Gpio.py --name i2c-gpio --bus_id 2 --address 32 --
 loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 67 --interval 0.1 --delay 2.6
 
 # Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
-loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 10 --channels 00:epcos_BC57560G0104F00,01:semitec_103GT_2,02:semitec_103GT_2,03:semitec_103GT_2,04:semitec_103GT_2,05:none,06:none,07:none
+loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 10 --channels 00:[HBP]THERMISTOR,01:[EXTRUDER_0]THERMISTOR,02:semitec_103GT_2,03:semitec_103GT_2,04:semitec_103GT_2,05:none,06:none,07:none
 
 net gpio-ok <= i2c-gpio.no-error
 net pwm-ok <= i2c-pwm.no-error
@@ -183,7 +180,7 @@ newcomp fdm-f3 timer=100
 newpin fdm-f3 fdm-f3.set float io
 ready fdm-f3
 
-newcomp fdm-l0 timer=100
+newcomp fdm-l0 timer=100 acceptdefaults
 newpin fdm-l0 fdm-l0.r float io
 newpin fdm-l0 fdm-l0.g float io
 newpin fdm-l0 fdm-l0.b float io
@@ -202,7 +199,7 @@ setp fdm-l0.w 1.0
 # in this case no waiting required
 # pin count, name, type, direction must match exactly what
 # is in the GUI
-newcomp pidctrl timer=100 acceptdefaults
+newcomp pidctrl timer=100
 newpin pidctrl pidctrl.Pgain              float io
 newpin pidctrl pidctrl.Igain              float io
 newpin pidctrl pidctrl.Dgain              float io
@@ -214,12 +211,12 @@ newpin pidctrl pidctrl.feedback           float in
 newpin pidctrl pidctrl.output             float in
 ready  pidctrl
 
-setp pidctrl.enable    FALSE
-setp pidctrl.Pgain     0.02
-setp pidctrl.Igain     0.00003
-setp pidctrl.Dgain     0.0001
-setp pidctrl.maxerrorI 0.2
-setp pidctrl.bias      0.09
+#setp pidctrl.enable    FALSE
+#setp pidctrl.Pgain     0.02
+#setp pidctrl.Igain     0.00003
+#setp pidctrl.Dgain     0.0001
+#setp pidctrl.maxerrorI 0.2
+#setp pidctrl.bias      0.09
 
 # at this stage, the component and its pins exist
 # and can be linked to
