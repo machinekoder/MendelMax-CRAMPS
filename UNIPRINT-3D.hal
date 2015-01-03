@@ -35,7 +35,7 @@ loadrt limit1 names=limit1.e0-heater,limit1.hbp-heater
 loadrt scale names=scale.f0,scale.f1,scale.f2,scale.f3
 loadrt led_dim names=led-dim.l0-r,led-dim.l0-g,led-dim.l0-b,led-dim.l0-w
 loadrt charge_pump
-loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hb
+loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hbp
 loadrt not names=not.e0-temp-range,not.hbp-temp-range
 loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,wcomp.hbp-temp-limit
 loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range
@@ -117,7 +117,7 @@ addf   bb_gpio.write                        servo-thread
 
 
 addf   thermistor-check.e0                  check-thread
-addf   thermistor-check.hb                  check-thread
+addf   thermistor-check.hbp                 check-thread
 
 
 # user components
