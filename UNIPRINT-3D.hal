@@ -1233,6 +1233,8 @@ net l0.g               <=> storage.l0.g
 net l0.b               <=> storage.l0.b
 net l0.w               <=> storage.l0.w
 
+setp storage.read-trigger 1 # trigger read
+
 # monitor the estop error sources
 newg error-sources 100
 newm error-sources estop-user
