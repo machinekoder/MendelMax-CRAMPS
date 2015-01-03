@@ -17,7 +17,7 @@ loadusr -W haltalk
 loadrt trivkins
 
 # motion controller, get name and thread periods from ini file
-loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=7 #[TRAJ]AXES
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=56 num_dio=56 #[TRAJ]AXES
 
 # THREADS
 loadrt threads name1=run-thread name2=check-thread period1=50170000 period2=300000000
@@ -30,38 +30,45 @@ loadrt hal_bb_gpio output_pins=107,119,126,226 input_pins=241
 loadrt [PRUCONF](DRIVER) prucode=[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
 
 # other components
-loadrt pid names=pid.e0-temp,pid.hb-temp
-loadrt limit1 names=limit1.e0-heater,limit1.hb-heater
-loadrt scale names=scale.e0-fan,scale.e1-fan
-loadrt led_dim names=led-dim.led-r,led-dim.led-g,led-dim.led-b,led-dim.led-w
+loadrt pid names=pid.e0-temp,pid.hbp-temp
+loadrt limit1 names=limit1.e0-heater,limit1.hbp-heater
+loadrt scale names=scale.f0,scale.f1,scale.f2,scale.f3
+loadrt led_dim names=led-dim.l0-r,led-dim.l0-g,led-dim.l0-b,led-dim.l0-w
 loadrt charge_pump
 loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hb
-loadrt not names=not.e0-temp-range,not.hb-temp-range
-loadrt wcomp names=wcomp.e0-temp-range,wcomp.hb-temp-range,wcomp.e0-temp-limit,wcomp.hb-temp-limit
-loadrt lowpass names=lowpass.e0-temp-range,lowpass.hb-temp-range
-loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hb-temp-range-neg,sum2.hb-temp-range-pos,sum2.ve-speed
-loadrt mult2 names=mult2.ve-line-cross,mult2.ve-nozzle-discharge,mult2.ve-extrude-rate,mult2.ve-filament-area,mult2.ve-diameter-squared
-loadrt abs names=abs.ve-xvel,abs.ve-yvel,abs.ve-zvel
-loadrt hypot names=hypot.ve-nozzle-vel
-loadrt invert names=invert.ve-filament-area
-loadrt mux4 names=mux4.ve-extruder-speed
-loadrt oneshot names=oneshot.ve-retract-wait
-loadrt ddt names=ddt.ve-extruder-accel
-loadrt lincurve names=lincurve.ve-speed-adjustment personality=3
-loadrt and2 names=and2.probe
-loadrt mux2 names=mux2.e0-speed-out,mux2.e0-temp-set,mux2.hb-temp-set,mux2.exp0-pwm
+loadrt not names=not.e0-temp-range,not.hbp-temp-range
+loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,wcomp.hbp-temp-limit
+loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range
+loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
+loadrt and2 names=and2.probe,and2.e0-no-error,and2.hbp-no-error
+loadrt mux2 names=mux2.e0-speed-out,mux2.exp0-pwm
+loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
 loadrt logic names=estopchain personality=0x108 # and 8 inputs
-loadrt comp names=comp.exp0-temp,comp.hb-hot
+loadrt comp names=comp.exp0-temp,comp.hbp-hot
 loadrt select8 names=select8.extruder
 loadrt watchdog num_inputs=3
-
+loadrt mux_generic config=bb4 # mux-gen.00 for probe
+loadrt conv_float_u32 names=f2u.probe.sel
 
 addf   [PRUCONF](DRIVER).capture-position   servo-thread
 addf   bb_gpio.read                         servo-thread
 addf   gantry.z.read                        servo-thread
 addf   motion-command-handler               servo-thread
+addf   f2u.probe.sel                        servo-thread
+addf   mux-gen.00                           servo-thread
 addf   and2.probe                           servo-thread
 addf   motion-controller                    servo-thread
+# HBP
+addf   sum2.hbp-temp-range-neg              servo-thread
+addf   sum2.hbp-temp-range-pos              servo-thread
+addf   lowpass.hbp-temp-range               servo-thread
+addf   wcomp.hbp-temp-range                 servo-thread
+addf   not.hbp-temp-range                   servo-thread
+addf   wcomp.hbp-temp-limit                 servo-thread
+addf   pid.hbp-temp.do-pid-calcs            servo-thread
+addf   limit1.hbp-heater                    servo-thread
+addf   in2io.hbp-temp-set                   servo-thread
+addf   and2.hbp-no-error                    servo-thread
 # E0
 addf   pid.e0-temp.do-pid-calcs             servo-thread
 addf   limit1.e0-heater                     servo-thread
@@ -71,28 +78,37 @@ addf   lowpass.e0-temp-range                servo-thread
 addf   wcomp.e0-temp-range                  servo-thread
 addf   not.e0-temp-range                    servo-thread
 addf   wcomp.e0-temp-limit                  servo-thread
-addf   scale.e0-fan                         servo-thread
-# E1
-addf   scale.e1-fan                         servo-thread
-# Bed
-addf   sum2.hb-temp-range-neg               servo-thread
-addf   sum2.hb-temp-range-pos               servo-thread
-addf   lowpass.hb-temp-range                servo-thread
-addf   wcomp.hb-temp-range                  servo-thread
-addf   not.hb-temp-range                    servo-thread
-addf   wcomp.hb-temp-limit                  servo-thread
-addf   pid.hb-temp.do-pid-calcs             servo-thread
-addf   limit1.hb-heater                     servo-thread
+addf   in2io.e0-temp-set                    servo-thread
+addf   and2.e0-no-error                     servo-thread
+# F0
+addf   in2io.f0-set                         servo-thread
+addf   scale.f0                             servo-thread
+# F1
+addf   in2io.f1-set                         servo-thread
+addf   scale.f1                             servo-thread
+# F2
+addf   in2io.f2-set                         servo-thread
+addf   scale.f2                             servo-thread
+# F3
+addf   in2io.f3-set                         servo-thread
+addf   scale.f3                             servo-thread
+# L0
+addf   in2io.l0-r                           servo-thread
+addf   in2io.l0-g                           servo-thread
+addf   in2io.l0-b                           servo-thread
+addf   in2io.l0-w                           servo-thread
+addf   led-dim.l0-r                         servo-thread
+addf   led-dim.l0-g                         servo-thread
+addf   led-dim.l0-b                         servo-thread
+addf   led-dim.l0-w                         servo-thread
 
 addf   comp.exp0-temp                       servo-thread
 addf   mux2.exp0-pwm                        servo-thread
 addf   select8.extruder                     servo-thread
-addf   comp.hb-hot                          servo-thread
+addf   comp.hbp-hot                         servo-thread
 
 # control from HAL
 addf   mux2.e0-speed-out                    servo-thread
-addf   mux2.e0-temp-set                     servo-thread
-addf   mux2.hb-temp-set                     servo-thread
 
 # Estop chain
 addf   watchdog.set-timeouts                servo-thread
@@ -105,41 +121,11 @@ addf   [PRUCONF](DRIVER).update             servo-thread
 addf   bb_gpio.write                        servo-thread
 
 
-#addf   charge-pump                          run-thread
-addf led-dim.led-r.update                     run-thread
-addf led-dim.led-g.update                     run-thread
-addf led-dim.led-b.update                     run-thread
-addf led-dim.led-w.update                     run-thread
+#addf   charge-pump                         run-thread
 
 
 addf   thermistor-check.e0                  check-thread
 addf   thermistor-check.hb                  check-thread
-
-
-# Related to velocity extruding
-#addf   sum2.ve-speed                        servo-thread
-
-#addf   mult2.ve-line-cross                  servo-thread
-#addf   mult2.ve-nozzle-discharge            servo-thread
-#addf   mult2.ve-extrude-rate                servo-thread
-#addf   mult2.ve-filament-area               servo-thread
-#addf   mult2.ve-diameter-squared            servo-thread
-
-#addf   abs.ve-xvel                          servo-thread
-#addf   abs.ve-yvel                          servo-thread
-#addf   abs.ve-zvel                          servo-thread
-
-#addf   hypot.ve-nozzle-vel                  servo-thread
-
-#addf   invert.ve-filament-area              servo-thread
-
-#addf   mux4.ve-extruder-speed               servo-thread
-
-#addf   oneshot.ve-retract-wait              servo-thread
-
-#addf   ddt.ve-extruder-accel                servo-thread
-
-#addf   lincurve.ve-speed-adjustment         servo-thread
 
 
 # user components
@@ -171,43 +157,43 @@ net temp-watchdog <= i2c-temp.watchdog
 # UI definition and defaults
 # ###################################
 
-newcomp fdm-e0 timer=100 acceptdefaults
-newpin fdm-e0 fdm-e0.temp.meas float in
-newpin fdm-e0 fdm-e0.temp.set  float in
-newpin fdm-e0 fdm-e0.enable    bit   in
-ready fdm-e0
+newcomp fdm-e0 timer=100
+newpin  fdm-e0 fdm-e0.temp.meas      float in
+newpin  fdm-e0 fdm-e0.temp.set       float io
+newpin  fdm-e0 fdm-e0.temp.limit.min float in
+newpin  fdm-e0 fdm-e0.temp.limit.max float in
+newpin  fdm-e0 fdm-e0.temp.in-range  bit   in
+newpin  fdm-e0 fdm-e0.no-error       bit   in
+ready   fdm-e0
 
-setp fdm-e0.enable 1
+newcomp fdm-hbp timer=100
+newpin  fdm-hbp fdm-hbp.temp.meas      float in
+newpin  fdm-hbp fdm-hbp.temp.set       float io
+newpin  fdm-hbp fdm-hbp.temp.limit.min float in
+newpin  fdm-hbp fdm-hbp.temp.limit.max float in
+newpin  fdm-hbp fdm-hbp.temp.in-range  bit   in
+newpin  fdm-hbp fdm-hbp.no-error       bit   in
+ready   fdm-hbp
 
-newcomp fdm-hb timer=100 acceptdefaults
-newpin fdm-hb fdm-hb.temp.meas float in
-newpin fdm-hb fdm-hb.temp.set  float in
-newpin fdm-hb fdm-hb.enable    bit   in
-ready fdm-hb
-
-setp fdm-hb.enable 1
-
-newcomp fdm-f0 timer=100 acceptdefaults
-newpin fdm-f0 fdm-f0.pwm.set float in
-newpin fdm-f0 fdm-f0.enable  bit   in
+newcomp fdm-f0 timer=100
+newpin fdm-f0 fdm-f0.set float io
 ready fdm-f0
 
-setp fdm-f0.enable 1
+newcomp fdm-f1 timer=100
+newpin fdm-f1 fdm-f1.set float io
+ready fdm-f1
 
-newcomp fdm-l0 timer=100 acceptdefaults
-newpin fdm-l0 fdm-l0.color.r float out
-newpin fdm-l0 fdm-l0.color.g float out
-newpin fdm-l0 fdm-l0.color.b float out
-newpin fdm-l0 fdm-l0.color.w float out
-newpin fdm-l0 fdm-l0.enable  bit   in
+newcomp fdm-l0 timer=100
+newpin fdm-l0 fdm-l0.r float io
+newpin fdm-l0 fdm-l0.g float io
+newpin fdm-l0 fdm-l0.b float io
+newpin fdm-l0 fdm-l0.w float io
 ready  fdm-l0
 
-setp fdm-l0.enable 1
-
-setp fdm-l0.color.r 1.0
-setp fdm-l0.color.g 1.0
-setp fdm-l0.color.b 1.0
-setp fdm-l0.color.w 1.0
+setp fdm-l0.r 1.0
+setp fdm-l0.g 1.0
+setp fdm-l0.b 1.0
+setp fdm-l0.w 1.0
 
 # wait the halcmd script until the UI has created the remote component 'pidctrl':
 # waitexists pidctrl
@@ -234,15 +220,6 @@ setp pidctrl.Igain     0.00003
 setp pidctrl.Dgain     0.0001
 setp pidctrl.maxerrorI 0.2
 setp pidctrl.bias      0.09
-
-newcomp extruderctrl timer=100 acceptdefaults
-newpin extruderctrl extruderctrl.enable         bit out
-newpin extruderctrl extruderctrl.velocity-cmd   float out
-newpin extruderctrl extruderctrl.velocity-fb    float in
-ready extruderctrl
-
-setp extruderctrl.enable       FALSE
-setp extruderctrl.velocity-cmd 0.0
 
 # at this stage, the component and its pins exist
 # and can be linked to
@@ -384,7 +361,6 @@ setp [PRUCONF](DRIVER).stepgen.02.dirpin          149
 #net emcmot.03.enable <= axis.2.amp-enable-out 
 net emcmot.02.enable => [PRUCONF](DRIVER).stepgen.03.enable
 
-
 # position command and feedback
 net motor.03.pos-cmd <= gantry.z.joint.01.pos-cmd
 net motor.03.pos-cmd => [PRUCONF](DRIVER).stepgen.03.position-cmd
@@ -421,105 +397,6 @@ sets emcmot.03.enable FALSE
 
 net emcmot.03.enable <= axis.3.amp-enable-out 
 net emcmot.03.enable => [PRUCONF](DRIVER).stepgen.04.enable
-
-#here i pass the value of the analog output from M67 E1 Q.. or M68 E1 Q.. to the multiplicator
-net ve-line-width => mult2.ve-line-cross.in0
-net ve-line-height => mult2.ve-line-cross.in1
-net ve-line-cross-section mult2.ve-line-cross.out => mult2.ve-nozzle-discharge.in1
-
-#take all the actual speeds from the axes and calculate resulting speed.
-net ve-xvel axis.0.joint-vel-cmd => abs.ve-xvel.in
-net ve-xvel-abs abs.ve-xvel.out => hypot.ve-nozzle-vel.in0
-net ve-yvel axis.1.joint-vel-cmd => abs.ve-yvel.in
-net ve-yvel-abs abs.ve-yvel.out => hypot.ve-nozzle-vel.in1
-net ve-zvel axis.2.joint-vel-cmd => abs.ve-zvel.in
-net ve-zvel-abs abs.ve-zvel.out => hypot.ve-nozzle-vel.in2
-
-#multiply area with speed and we get discharge (mm^3 per second)
-net ve-nozzle-vel-cartesian hypot.ve-nozzle-vel.out => mult2.ve-nozzle-discharge.in0
-net ve-nozzle-discharge mult2.ve-nozzle-discharge.out => mult2.ve-extrude-rate.in0
-
-#calaulate filament cross section area
-#PI divided by 4
-setp mult2.ve-filament-area.in0 0.785398163397
-setp mult2.ve-diameter-squared.in0 [EXTRUDER]DIA_FILAMENT
-setp mult2.ve-diameter-squared.in1 [EXTRUDER]DIA_FILAMENT
-
-net ve-diameter-squared mult2.ve-diameter-squared.out => mult2.ve-filament-area.in1
-net ve-filament-area mult2.ve-filament-area.out => invert.ve-filament-area.in
-net ve-divide-by-filament-area invert.ve-filament-area.out => mult2.ve-extrude-rate.in1
-
-#net ve-extruder-speed mux4.ve-extruder-speed.out => [PRUCONF](DRIVER).stepgen.03.velocity-cmd
-
-# now the solution of Andy Pugh for automatically retracting/priming
-#loadrt mux4 count=1
-#00 = motion without extrusion
-#01 = retract
-#10 = motion with extrusion
-#11 = pre-charge
-
-setp mux4.ve-extruder-speed.in0 0
-setp mux4.ve-extruder-speed.in1 -4
-net ve-extrude-rate mult2.ve-extrude-rate.out => mux4.ve-extruder-speed.in2
-setp mux4.ve-extruder-speed.in3 4
-
-# We want the retract-charge to run for a fixed time:
-# when sel0 set to "1" meaning motion with extrusion" the on the rising edge
-# there will temporarily be also sel1 which is high, meaning a pre-charge because the
-# sel combination is 11
-# when sel1 set to "0" meaning decoupling motion with extrusion" then the falling edge
-# will ve-trigger a 01 combination, meaning a retract
-net ve-trigger => oneshot.ve-retract-wait.in
-net ve-trigger => mux4.ve-extruder-speed.sel1
-net pulse oneshot.ve-retract-wait.out mux4.ve-extruder-speed.sel0 motion.feed-hold
-setp oneshot.ve-retract-wait.rising 1
-setp oneshot.ve-retract-wait.falling 1
-setp oneshot.ve-retract-wait.retriggerable 1
-#setp oneshot.ve-retract-wait.width 0.0
-#by setting the width, the automatic retract/precharge can be disabled
-net ve-trigger-time => oneshot.ve-retract-wait.width
-
-#get readout from the current motion pin
-net ve-current-motion-type motion.current-motion
-
-#net trigger-finished oneshot.ve-retract-wait.out-not motion.digital-in-01
-#net feed-hold oneshot.ve-retract-wait.out => motion.feed-hold
-
-# these are used for a small offset in velocity during acceleration (buildup pressure inside
-# the nozzle because of the current speed. Take the maximum accel you've specified in .ini
-#setp lincurve.ve-speed-adjustment.x-val-00 -3500
-#setp lincurve.ve-speed-adjustment.x-val-01 0
-#setp lincurve.ve-speed-adjustment.x-val-02 3000
-#setp lincurve.ve-speed-adjustment.y-val-00 -3500
-#setp lincurve.ve-speed-adjustment.y-val-01 0
-#setp lincurve.ve-speed-adjustment.y-val-02 3500
-
-setp lincurve.ve-speed-adjustment.x-val-00 -18
-setp lincurve.ve-speed-adjustment.x-val-01 0
-setp lincurve.ve-speed-adjustment.x-val-02 18
-setp lincurve.ve-speed-adjustment.y-val-00 -5.5
-setp lincurve.ve-speed-adjustment.y-val-01 0
-setp lincurve.ve-speed-adjustment.y-val-02 5.5
-
-# get the extruder speed into sum2.ve-speed and ddt
-net ve-extruder-speed mux4.ve-extruder-speed.out sum2.ve-speed.in0 ddt.ve-extruder-accel.in
-# get acceleration into lincurve
-net extruder-accel ddt.ve-extruder-accel.out lincurve.ve-speed-adjustment.in
-# get adjusted speed for adding to current speed during accelleration
-net speed-adjustment lincurve.ve-speed-adjustment.out sum2.ve-speed.in1
-net ve-extruder-speed-adjusted sum2.ve-speed.out mux2.e0-speed-out.in0
-
-# multiplex output
-net ve-extruder-speed-out mux2.e0-speed-out.out => [PRUCONF](DRIVER).stepgen.04.velocity-cmd
-
-#########
-###todo
-###manual extrusion with analog out 01 (velocity in mm/s) and mux2 selectable by digital input 01
-#########
-net ve-extruder-speed-user-out     extruderctrl.velocity-cmd => mux2.e0-speed-out.in1
-net ve-extruder-speed-user-enable  extruderctrl.enable => mux2.e0-speed-out.sel
-net ve-extruder-speed-out => extruderctrl.velocity-fb
-
 
 # position command and feedback
 net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
@@ -618,14 +495,94 @@ net home-z        => axis.2.home-sw-in
 # ################
 # Probe
 # ################
-newsig probe-input bit
-newsig probe-enable bit
-newsig probe-signal bit
+newsig probe.input              bit
+newsig probe.enable             bit
+newsig probe.signal             bit
+newsig probe.muxed               bit
+newsig probe.sel                u32
+newsig probe.sel-f               float
+newsig probe.offset.x           float
+newsig probe.offset.y           float
+newsig probe.offset.z           float
+newsig probe.offset.x-program   float
+newsig probe.offset.y-program   float
+newsig probe.offset.z-program   float
+newsig probe.offset.x-trigger   bit
+newsig probe.offset.y-trigger   bit
+newsig probe.offset.z-trigger   bit
+newsig p0.x           float
+newsig p0.y           float
+newsig p0.x-program   float
+newsig p0.y-program   float
+newsig p0.x-trigger   bit
+newsig p0.y-trigger   bit
+newsig p1.x           float
+newsig p1.y           float
+newsig p1.x-program   float
+newsig p1.y-program   float
+newsig p1.x-trigger   bit
+newsig p1.y-trigger   bit
+newsig p2.x           float
+newsig p2.y           float
+newsig p2.x-program   float
+newsig p2.y-program   float
+newsig p2.x-trigger   bit
+newsig p2.y-trigger   bit
+newsig p3.x           float
+newsig p3.y           float
+newsig p3.x-program   float
+newsig p3.y-program   float
+newsig p3.x-trigger   bit
+newsig p3.y-trigger   bit
 
-net probe-signal => and2.probe.in0
-net probe-enable => and2.probe.in1
-net probe-input  <= and2.probe.out
-net probe-input  => motion.probe-input
+net probe.offset.x-program => in2io.probe-offset-x.in
+net probe.offset.x-trigger => in2io.probe-offset-x.trigger
+net probe.offset.x         <= in2io.probe-offset-x.io
+net probe.offset.y-program => in2io.probe-offset-y.in
+net probe.offset.y-trigger => in2io.probe-offset-y.trigger
+net probe.offset.y         <= in2io.probe-offset-y.io
+net probe.offset.z-program => in2io.probe-offset-z.in
+net probe.offset.z-trigger => in2io.probe-offset-z.trigger
+net probe.offset.z         <= in2io.probe-offset-z.io
+net p0.x-program => in2io.p0-x.in
+net p0.x-trigger => in2io.p0-x.trigger
+net p0.x         <= in2io.p0-x.io
+net p0.y-program => in2io.p0-y.in
+net p0.y-trigger => in2io.p0-y.trigger
+net p0.y         <= in2io.p0-y.io
+net p1.x-program => in2io.p1-x.in
+net p1.x-trigger => in2io.p1-x.trigger
+net p1.x         <= in2io.p1-x.io
+net p1.y-program => in2io.p1-y.in
+net p1.y-trigger => in2io.p1-y.trigger
+net p1.y         <= in2io.p1-y.io
+net p2.x-program => in2io.p2-x.in
+net p2.x-trigger => in2io.p2-x.trigger
+net p2.x         <= in2io.p2-x.io
+net p2.y-program => in2io.p2-y.in
+net p2.y-trigger => in2io.p2-y.trigger
+net p2.y         <= in2io.p2-y.io
+net p3.x-program => in2io.p3-x.in
+net p3.x-trigger => in2io.p3-x.trigger
+net p3.x         <= in2io.p3-x.io
+net p3.y-program => in2io.p3-y.in
+net p3.y-trigger => in2io.p3-y.trigger
+net p3.y         <= in2io.p3-y.io
+
+net probe.sel-f => f2u.probe-sel.in
+net probe.sel  <= f2u.probe-sel.out
+
+net probe.sel    => mux-gen.00.sel-int
+net probe.muxed  <= mux-gen.00.out-bit
+net probe.signal => mux-gen.00.in-bit-00
+net limit-x-home => mux-gen.00.in-bit-01
+net limit-y-home => mux-gen.00.in-bit-02
+net home-z       => mux-gen.00.in-bit-03
+
+net probe.muxed  => and2.probe.in0
+net probe.enable => and2.probe.in1
+net probe.input  <= and2.probe.out
+net probe.input  => motion.probe.input
 
 
 # ##################################################
@@ -636,7 +593,7 @@ net probe-input  => motion.probe-input
 # If you change any names here, lots of things will break!
 newsig e0.temp.set               float
 newsig e0.temp.set-program       float
-newsig e0.temp.set-user          float
+newsig e0.temp.set-trigger       bit
 newsig e0.temp.meas              float
 newsig e0.temp.measl             float
 newsig e0.temp.range.pos_error   float
@@ -644,29 +601,31 @@ newsig e0.temp.range.neg_error   float
 newsig e0.temp.range.max         float
 newsig e0.temp.range.min         float
 newsig e0.temp.range.lowpassgain float
-newsig e0.temp.in_range          bit
+newsig e0.temp.in-range          bit
 newsig e0.temp.pwm               float
 newsig e0.temp.pwm.max           float
-newsig e0.temp.limit.low         float
-newsig e0.temp.limit.high        float
-newsig e0.temp.in_limit          bit
-newsig e0.therm_working          bit
+newsig e0.temp.limit.min         float
+newsig e0.temp.limit.max         float
+newsig e0.temp.in-limit          bit
+newsig e0.therm-ok               bit
+newsig e0.no-error               bit
 
-newsig hb.temp.set              float
-newsig hb.temp.set-program      float
-newsig hb.temp.set-user         float
-newsig hb.temp.meas             float
-newsig hb.temp.range.pos_error  float
-newsig hb.temp.range.neg_error  float
-newsig hb.temp.range.max        float
-newsig hb.temp.range.min        float
-newsig hb.temp.in_range         bit
-newsig hb.temp.pwm              float
-newsig hb.temp.pwm.max          float
-newsig hb.temp.limit.low        float
-newsig hb.temp.limit.high       float
-newsig hb.temp.in_limit         bit
-newsig hb.therm_working         bit
+newsig hbp.temp.set              float
+newsig hbp.temp.set-program      float
+newsig hbp.temp.set-trigger      bit
+newsig hbp.temp.meas             float
+newsig hbp.temp.range.pos_error  float
+newsig hbp.temp.range.neg_error  float
+newsig hbp.temp.range.max        float
+newsig hbp.temp.range.min        float
+newsig hbp.temp.in-range         bit
+newsig hbp.temp.pwm              float
+newsig hbp.temp.pwm.max          float
+newsig hbp.temp.limit.min        float
+newsig hbp.temp.limit.max        float
+newsig hbp.temp.in-limit         bit
+newsig hbp.therm-ok              bit
+newsig hbp.no-error              bit
 
 # Extruder 0 temperature control
 # --------------------------------------------------------------------------
@@ -684,10 +643,10 @@ net e0.heaterl     <= limit1.e0-heater.out
 # Limit heater PWM to positive values
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.e0-heater.min 0.0
-setp limit1.e0-heater.max 0.5
+setp limit1.e0-heater.max [EXTRUDER_0]PWM_MAX
 #net e0.temp.pwm.max => limit1.e0-heater.max
 net e0.temp.pwm.max => pid.e0-temp.maxoutput
-sets e0.temp.pwm.max 0.5
+sets e0.temp.pwm.max [EXTRUDER_0]PWM_MAX
 
 # Temperature checking
 net e0.temp.set              => sum2.e0-temp-range-pos.in0
@@ -705,43 +664,48 @@ net e0.temp.range.max sum2.e0-temp-range-pos.out => wcomp.e0-temp-range.max
 net e0.temp.measl                => wcomp.e0-temp-range.in
 #the output of wcomp.e0-temp-range will say if measured temperature is in range of set value
 #this needs to be coupled to a digital input for M66 readout
-net e0.temp.in_range <= wcomp.e0-temp-range.out
+net e0.temp.in-range <= wcomp.e0-temp-range.out
 
-# multiplex user and program input
-net e0.temp.set-program => mux2.e0-temp-set.in0
-net e0.temp.set-user    => mux2.e0-temp-set.in1
-net e0.temp.set         <= mux2.e0-temp-set.out
+# buffer program input
+net e0.temp.set-program => in2io.e0-temp-set.in
+net e0.temp.set-trigger => in2io.e0-temp-set.trigger
+net e0.temp.set         <= in2io.e0-temp-set.io
 
 # limit the output temperature to prevent damage when thermistor is broken/removed
-net e0.temp.limit.low         => wcomp.e0-temp-limit.min
-net e0.temp.limit.high        => wcomp.e0-temp-limit.max
+net e0.temp.limit.min         => wcomp.e0-temp-limit.min
+net e0.temp.limit.max        => wcomp.e0-temp-limit.max
 net e0.temp.meas              => wcomp.e0-temp-limit.in
-net e0.temp.in_limit          <= wcomp.e0-temp-limit.out
+net e0.temp.in-limit          <= wcomp.e0-temp-limit.out
 
 # check the thermistor
 net e0.temp.meas              => thermistor-check.e0.temp
-net e0.temp.in_range          => not.e0-temp-range.in
-net e0.temp.in_range_n        <= not.e0-temp-range.out
-net e0.temp.in_range_n        => thermistor-check.e0.enable
+net e0.temp.in-range          => not.e0-temp-range.in
+net e0.temp.in-range_n        <= not.e0-temp-range.out
+net e0.temp.in-range_n        => thermistor-check.e0.enable
 net e0.heaterl                => thermistor-check.e0.pid
-net e0.therm_working          <= thermistor-check.e0.out
+net e0.therm-ok               <= thermistor-check.e0.out
+
+# no error chain
+net e0.therm-ok => and2.e0-no-error.in0
+net e0.in-limit => and2.e0-no-error.in1
+net e0.no-error <= and2.e0-no-error.out
 
 # PID parameters
 #setp pid.e0-temp.FF0      0
 #setp pid.e0-temp.FF1      0
 #setp pid.e0-temp.FF2      0
-setp pid.e0-temp.Pgain     0.10
-setp pid.e0-temp.Igain     0.00001
-setp pid.e0-temp.Dgain     1.5
-setp pid.e0-temp.maxerrorI 1.0
-setp pid.e0-temp.bias      0.15
+setp pid.e0-temp.Pgain     [EXTRUDER_0]PID_PGAIN
+setp pid.e0-temp.Igain     [EXTRUDER_0]PID_IGAIN
+setp pid.e0-temp.Dgain     [EXTRUDER_0]PID_DGAIN
+setp pid.e0-temp.maxerrorI [EXTRUDER_0]PID_MAXERRORI
+setp pid.e0-temp.bias      [EXTRUDER_0]PID_BIAS
 
 # Parameters
-sets e0.temp.range.pos_error 1.0
-sets e0.temp.range.neg_error -1.0
-sets e0.temp.range.lowpassgain 0.0008
-sets e0.temp.limit.low       0.0
-sets e0.temp.limit.high      280.0
+sets e0.temp.range.pos_error   [EXTRUDER_0]TEMP_RANGE_POS_ERROR
+sets e0.temp.range.neg_error   [EXTRUDER_0]TEMP_RANGE_NEG_ERROR
+sets e0.temp.range.lowpassgain [EXTRUDER_0]TEMP_RANGE_LOWPASSGAIN
+sets e0.temp.limit.min         [EXTRUDER_0]TEMP_LIMIT_MIN
+sets e0.temp.limit.max         [EXTRUDER_0]TEMP_LIMIT_MAX
 
 setp thermistor-check.e0.wait 30
 setp thermistor-check.e0.min-pid 0.25
@@ -752,72 +716,77 @@ setp thermistor-check.e0.min-temp 1.5
 # ----------------------------------------------------------------------------
 
 # PID
-net emcmot.00.enable => pid.hb-temp.enable
-net hb.temp.meas    => pid.hb-temp.feedback
-net hb.temp.set     => pid.hb-temp.command
-net hb.heater       <= pid.hb-temp.output
-net hb.heater       => limit1.hb-heater.in
-net hb.heaterl      <= limit1.hb-heater.out
+net emcmot.00.enable => pid.hbp-temp.enable
+net hbp.temp.meas    => pid.hbp-temp.feedback
+net hbp.temp.set     => pid.hbp-temp.command
+net hbp.heater       <= pid.hbp-temp.output
+net hbp.heater       => limit1.hbp-heater.in
+net hbp.heaterl      <= limit1.hbp-heater.out
 
 # Limit heater PWM to positive values
 # PWM mimics hm2 implementation, which generates output for negative values
-setp limit1.hb-heater.min 0
-setp limit1.hb-heater.max 0.7
-#net hb.temp.pwm.max => limit1.hb-heater.max
-net hb.temp.pwm.max => pid.hb-temp.maxoutput
-sets hb.temp.pwm.max 0.7
+setp limit1.hbp-heater.min 0
+setp limit1.hbp-heater.max [HBP]PWM_MAX
+#net hbp.temp.pwm.max => limit1.hbp-heater.max
+net hbp.temp.pwm.max => pid.hbp-temp.maxoutput
+sets hbp.temp.pwm.max [HBP]PWM_MAX
 
 # Temperature checking
-net hb.temp.set              => sum2.hb-temp-range-pos.in0
-net hb.temp.range.pos_error  => sum2.hb-temp-range-pos.in1
-net hb.temp.set              => sum2.hb-temp-range-neg.in0
-net hb.temp.range.neg_error  => sum2.hb-temp-range-neg.in1
+net hbp.temp.set              => sum2.hbp-temp-range-pos.in0
+net hbp.temp.range.pos_error  => sum2.hbp-temp-range-pos.in1
+net hbp.temp.set              => sum2.hbp-temp-range-neg.in0
+net hbp.temp.range.neg_error  => sum2.hbp-temp-range-neg.in1
 
-net hb.temp.range.min sum2.hb-temp-range-neg.out => wcomp.hb-temp-range.min
-net hb.temp.range.max sum2.hb-temp-range-pos.out => wcomp.hb-temp-range.max
-net hb.temp.meas                 => wcomp.hb-temp-range.in
+net hbp.temp.range.min sum2.hbp-temp-range-neg.out => wcomp.hbp-temp-range.min
+net hbp.temp.range.max sum2.hbp-temp-range-pos.out => wcomp.hbp-temp-range.max
+net hbp.temp.meas                 => wcomp.hbp-temp-range.in
 #the output of wcomp.e0-temp-range will say if measured temperature is in range of set value
 #this needs to be coupled to a digital input for M66 readout
-net hb.temp.in_range <= wcomp.hb-temp-range.out
+net hbp.temp.in-range <= wcomp.hbp-temp-range.out
 
-# multiplex user and program input
-net hb.temp.set-program => mux2.hb-temp-set.in0
-net hb.temp.set-user    => mux2.hb-temp-set.in1
-net hb.temp.set         <= mux2.hb-temp-set.out
+# buffer program input
+net hbp.temp.set-program => in2io.hbp-temp-set.in
+net hbp.temp.set-trigger => in2io.hbp-temp-set.trigger
+net hbp.temp.set         <= in2io.hbp-temp-set.io
 
 # limit the output temperature to prevent damage when thermistor is broken/removed
-net hb.temp.limit.low         => wcomp.hb-temp-limit.min
-net hb.temp.limit.high        => wcomp.hb-temp-limit.max
-net hb.temp.meas              => wcomp.hb-temp-limit.in
-net hb.temp.in_limit          <= wcomp.hb-temp-limit.out
+net hbp.temp.limit.min         => wcomp.hbp-temp-limit.min
+net hbp.temp.limit.max        => wcomp.hbp-temp-limit.max
+net hbp.temp.meas              => wcomp.hbp-temp-limit.in
+net hbp.temp.in-limit          <= wcomp.hbp-temp-limit.out
 
 # check the thermistor
-net hb.temp.meas              => thermistor-check.hb.temp
-net hb.temp.in_range          => not.hb-temp-range.in
-net hb.temp.in_range_n        <= not.hb-temp-range.out
-net hb.temp.in_range_n        => thermistor-check.hb.enable
-net hb.heaterl                => thermistor-check.hb.pid
-net hb.therm_working          <= thermistor-check.hb.out
+net hbp.temp.meas              => thermistor-check.hbp.temp
+net hbp.temp.in-range          => not.hbp-temp-range.in
+net hbp.temp.in-range_n        <= not.hbp-temp-range.out
+net hbp.temp.in-range_n        => thermistor-check.hbp.enable
+net hbp.heaterl                => thermistor-check.hbp.pid
+net hbp.therm-ok               <= thermistor-check.hbp.out
+
+# no error chain
+net hbp.therm-ok => and2.hbp-no-error.in0
+net hbp.in-limit => and2.hbp-no-error.in1
+net hbp.no-error <= and2.hbp-no-error.out
 
 # PID parameters
-#setp pid.hb-temp.FF0      0
-#setp pid.hb-temp.FF1      0
-#setp pid.hb-temp.FF2      0
-setp pid.hb-temp.Pgain  1
-setp pid.hb-temp.Igain  0.0
-setp pid.hb-temp.Dgain  0.0
-setp pid.hb-temp.maxerrorI 1.0
-setp pid.hb-temp.bias    0.5
+#setp pid.hbp-temp.FF0      0
+#setp pid.hbp-temp.FF1      0
+#setp pid.hbp-temp.FF2      0
+setp pid.hbp-temp.Pgain     [HBP]PID_PGAIN
+setp pid.hbp-temp.Igain     [HBP]PID_IGAIN
+setp pid.hbp-temp.Dgain     [HBP]PID_DGAIN
+setp pid.hbp-temp.maxerrorI [HBP]PID_MAXERRORI
+setp pid.hbp-temp.bias      [HBP]PID_BIAS
 
 # Parameters
-sets hb.temp.range.pos_error 2.0
-sets hb.temp.range.neg_error -2.0
-sets hb.temp.limit.low       0.0
-sets hb.temp.limit.high      150.0
+sets hbp.temp.range.pos_error [HBP]TEMP_RANGE_POS_ERROR
+sets hbp.temp.range.neg_error [HBP]TEMP_RANGE_NEG_ERROR
+sets hbp.temp.limit.min       [HBP]TEMP_LIMIT_MIN
+sets hbp.temp.limit.max       [HBP]TEMP_LIMIT_MAX
 
-setp thermistor-check.hb.wait 60
-setp thermistor-check.hb.min-pid 0.3
-setp thermistor-check.hb.min-temp 1.5
+setp thermistor-check.hbp.wait 60
+setp thermistor-check.hbp.min-pid 0.3
+setp thermistor-check.hbp.min-temp 1.5
 
 
 # PIDctrl
@@ -849,77 +818,141 @@ sets extruder.sel 0
 # ##################################################
 # RGBW LED
 # ##################################################
-newsig led.r   float
-newsig led.g   float
-newsig led.b   float
-newsig led.w   float
-newsig led.r-in float
-newsig led.g-in float
-newsig led.b-in float
-newsig led.w-in float
 
-net led.r <= led-dim.led-r.output
-net led.g <= led-dim.led-g.output
-net led.b <= led-dim.led-b.output
-net led.w <= led-dim.led-w.output
+newsig l0.r           float
+newsig l0.g           float
+newsig l0.b           float
+newsig l0.w           float
+newsig l0.r-program   float
+newsig l0.g-program   float
+newsig l0.b-program   float
+newsig l0.w-program   float
+newsig l0.r-trigger   bit
+newsig l0.g-trigger   bit
+newsig l0.b-trigger   bit
+newsig l0.w-trigger   bit
+newsig l0.r-out       float
+newsig l0.g-out       float
+newsig l0.b-out       float
+newsig l0.w-out       float
 
-net led.r-in <= fdm-l0.color.r
-net led.r-in => led-dim.led-r.input
-net led.g-in <= fdm-l0.color.g
-net led.g-in => led-dim.led-g.input
-net led.b-in <= fdm-l0.color.b
-net led.b-in => led-dim.led-b.input
-net led.w-in <= fdm-l0.color.w
-net led.w-in => led-dim.led-w.input
+# buffer program input
+net l0.r-program => in2io.l0-r.in
+net l0.r-trigger => in2io.l0-r.trigger
+net l0.r         <= in2io.l0-r.io
+net l0.g-program => in2io.l0-g.in
+net l0.g-trigger => in2io.l0-g.trigger
+net l0.g         <= in2io.l0-g.io
+net l0.b-program => in2io.l0-b.in
+net l0.b-trigger => in2io.l0-b.trigger
+net l0.b         <= in2io.l0-b.io
+net l0.w-program => in2io.l0-w.in
+net l0.w-trigger => in2io.l0-w.trigger
+net l0.w         <= in2io.l0-w.io
 
-setp led-dim.led-r.factor 5.0
-setp led-dim.led-r.steps  256
-setp led-dim.led-r.max-pwm 4095
-setp led-dim.led-g.factor 5.0
-setp led-dim.led-g.steps  256
-setp led-dim.led-g.max-pwm 4095
-setp led-dim.led-b.factor 5.0
-setp led-dim.led-b.steps  256
-setp led-dim.led-b.max-pwm 4095
-setp led-dim.led-w.factor 5.0
-setp led-dim.led-w.steps  256
-setp led-dim.led-w.max-pwm 4095
+net l0.r-out <= led-dim.l0-r.output
+net l0.g-out <= led-dim.l0-g.output
+net l0.b-out <= led-dim.l0-b.output
+net l0.w-out <= led-dim.l0-w.output
+
+net l0.r => led-dim.l0-r.input
+net l0.g => led-dim.l0-g.input
+net l0.b => led-dim.l0-b.input
+net l0.w => led-dim.l0-w.input
+
+setp led-dim.l0-r.factor 5.0
+setp led-dim.l0-r.steps  256
+setp led-dim.l0-r.max-pwm 4095
+setp led-dim.l0-g.factor 5.0
+setp led-dim.l0-g.steps  256
+setp led-dim.l0-g.max-pwm 4095
+setp led-dim.l0-b.factor 5.0
+setp led-dim.l0-b.steps  256
+setp led-dim.l0-b.max-pwm 4095
+setp led-dim.l0-w.factor 5.0
+setp led-dim.l0-w.steps  256
+setp led-dim.l0-w.max-pwm 4095
 
 # ##################################################
 # HB LED
 # ##################################################
-newsig led.hb-info bit
-newsig led.hb-hot bit
+newsig l0.hbp-info bit
+newsig l0.hbp-hot bit
 
-setp comp.hb-hot.in0 50.0
-setp comp.hb-hot.hyst 2.0
-net hb.temp.meas => comp.hb-hot.in1
-net led.hb-hot <= comp.hb-hot.out
+setp comp.hbp-hot.in0 50.0
+setp comp.hbp-hot.hyst 2.0
+net hbp.temp.meas => comp.hbp-hot.in1
+net l0.hbp-hot <= comp.hbp-hot.out
 
 # ##################################################
 # Fans
 # ##################################################
-newsig e0.fan.set   float
-newsig e0.fan.pwm   float
-newsig e1.fan.set   float
-newsig e1.fan.pwm   float
-newsig exp0.fan.pwm float
-newsig exp0.fan.enable bit
 
-# E0 Fan
-# -------
-setp scale.e0-fan.gain 0.00392156862745
-net e0.fan.set => scale.e0-fan.in
-net e0.fan.pwm <= scale.e0-fan.out
+# F0
+# ---------------------------
+newsig f0.set           float
+newsig f0.set-program   float
+newsig f0.set-trigger   bit
+newsig f0.pwm           float
+# ---------------------------
+net f0.set-program => in2io.f0-set.in
+net f0.set-trigger => in2io.f0-set.trigger
+net f0.set         <= in2io.f0-set.io
 
-# E1 Fan
-# -------
-setp scale.e1-fan.gain 0.00392156862745
-net e1.fan.set => scale.e1-fan.in
-net e1.fan.pwm <= scale.e1-fan.out
+setp scale.f0.gain 0.00392156862745
+net f0.set => scale.f0.in
+net f0.pwm <= scale.f0.out
+
+# F1
+# ---------------------------
+newsig f1.set           float
+newsig f1.set-program   float
+newsig f1.set-trigger   bit
+newsig f1.pwm           float
+# ---------------------------
+net f1.set-program => in2io.f1-set.in
+net f1.set-trigger => in2io.f1-set.trigger
+net f1.set         <= in2io.f1-set.io
+
+setp scale.f1.gain 0.00392156862745
+net f1.set => scale.f1.in
+net f1.pwm <= scale.f1.out
+
+# F2
+# ---------------------------
+newsig f2.set           float
+newsig f2.set-program   float
+newsig f2.set-trigger   bit
+newsig f2.pwm           float
+# ---------------------------
+net f2.set-program => in2io.f2-set.in
+net f2.set-trigger => in2io.f2-set.trigger
+net f2.set         <= in2io.f2-set.io
+
+setp scale.f2.gain 0.00392156862745
+net f2.set => scale.f2.in
+net f2.pwm <= scale.f2.out
+
+# F3
+# ---------------------------
+newsig f3.set           float
+newsig f3.set-program   float
+newsig f3.set-trigger   bit
+newsig f3.pwm           float
+# ---------------------------
+net f3.set-program => in2io.f3-set.in
+net f3.set-trigger => in2io.f3-set.trigger
+net f3.set         <= in2io.f3-set.io
+
+setp scale.f3.gain 0.00392156862745
+net f3.set => scale.f3.in
+net f3.pwm <= scale.f3.out
 
 # Hotend Fan
-# -----------
+# --------------------------
+newsig exp0.fan.pwm    float
+newsig exp0.fan.enable bit
+# --------------------------
 setp mux2.exp0-pwm.in0 0.0
 setp mux2.exp0-pwm.in1 1.0
 setp comp.exp0-temp.in0 50.0
@@ -936,7 +969,7 @@ net exp0.fan.enable => mux2.exp0-pwm.sel
 # Bed Heater
 setp i2c-pwm.out-00.enable 1
 setp i2c-pwm.out-00.value  0.0
-net hb.heaterl => i2c-pwm.out-00.value
+net hbp.heaterl => i2c-pwm.out-00.value
 
 # E0 Heater
 setp i2c-pwm.out-01.enable 1
@@ -955,23 +988,25 @@ setp i2c-pwm.out-03.value  0.0
 setp i2c-pwm.out-04.enable 1
 setp i2c-pwm.out-04.value  0.0
 
-# E0 Fan
+# F0
 setp i2c-pwm.out-05.enable 1
 setp i2c-pwm.out-05.value  0.0
-net e0.fan.pwm => i2c-pwm.out-05.value
+net f0.pwm => i2c-pwm.out-05.value
 
-# E1 Fan
+# F1
 setp i2c-pwm.out-06.enable 1
 setp i2c-pwm.out-06.value  0.0
-net e1.fan.pwm => i2c-pwm.out-06.value
+net f1.pwm => i2c-pwm.out-06.value
 
-# E2 Fan
+# F2
 setp i2c-pwm.out-07.enable 1
 setp i2c-pwm.out-07.value  0.0
+net f2.pwm => i2c-pwm.out-07.value
 
-# E3 Fan
+# F3
 setp i2c-pwm.out-08.enable 1
 setp i2c-pwm.out-08.value  0.0
+net f3.pwm => i2c-pwm.out-08.value
 
 # Exp0
 setp i2c-pwm.out-09.enable 1
@@ -985,22 +1020,22 @@ setp i2c-pwm.out-10.value  0.0
 # LED-R
 setp i2c-pwm.out-11.enable 1
 setp i2c-pwm.out-11.value  0.0
-net led.r => i2c-pwm.out-11.value
+net l0.r-out => i2c-pwm.out-11.value
 
 # LED-G
 setp i2c-pwm.out-12.enable 1
 setp i2c-pwm.out-12.value  0.0
-net led.g => i2c-pwm.out-12.value
+net l0.g-out => i2c-pwm.out-12.value
 
 # LED-B
 setp i2c-pwm.out-13.enable 1
 setp i2c-pwm.out-13.value  0.0
-net led.b => i2c-pwm.out-13.value
+net l0.b-out => i2c-pwm.out-13.value
 
 # LED-W
 setp i2c-pwm.out-14.enable 1
 setp i2c-pwm.out-14.value  0.0
-net led.w => i2c-pwm.out-14.value
+net l0.w-out => i2c-pwm.out-14.value
 
 # PWM0
 setp i2c-pwm.out-15.enable 1
@@ -1012,13 +1047,13 @@ setp i2c-pwm.frequency 1000
 # GPIO
 # ##################################################
 newsig pwr-mon bit
-newsig hb-mon  bit
+newsig hbp-mon  bit
 
 net limit-x-home  <= i2c-gpio.A.in-00
 net limit-y-home  <= i2c-gpio.A.in-01
 net limit-zr-home <= i2c-gpio.A.in-02
 net limit-zl-home <= i2c-gpio.A.in-03
-net probe-signal  <= i2c-gpio.A.in-04
+net probe.signal  <= i2c-gpio.A.in-04
 #net sensor1       <= i2c-gpio.A.in-05
 #net sensor2       <= i2c-gpio.A.in-06
 #net sensor3       <= i2c-gpio.A.in-07
@@ -1026,10 +1061,10 @@ net e0.enable     => i2c-gpio.B.out-00
 net e1.enable     => i2c-gpio.B.out-01
 net e2.enable     => i2c-gpio.B.out-02
 net e3.enable     => i2c-gpio.B.out-03
-net led.hb-info   => i2c-gpio.B.out-04
-net led.hb-hot    => i2c-gpio.B.out-05
+net l0.hbp-info   => i2c-gpio.B.out-04
+net l0.hbp-hot    => i2c-gpio.B.out-05
 net pwr-mon       <= i2c-gpio.B.in-06
-net hb-mon        <= i2c-gpio.B.in-07
+net hbp-mon        <= i2c-gpio.B.in-07
 
 # Adjust as needed for your switch polarity
 setp i2c-gpio.A.in-00.invert 1
@@ -1064,8 +1099,8 @@ setp i2c-gpio.B.in-07.pullup 0
 # ##################################################
 # ADC
 # ##################################################
-net hb.temp.meas        <= i2c-temp.ch-00.value
-net e0.temp.meas        <= i2c-temp.ch-01.value
+net hbp.temp.meas        <= i2c-temp.ch-00.value
+net e0.temp.meas         <= i2c-temp.ch-01.value
 #net e1.temp.meas        <= i2c-temp.ch-02.value
 #net e2.temp.meas        <= i2c-temp.ch-03.value
 #net e3.temp.meas        <= i2c-temp.ch-04.value
@@ -1076,28 +1111,97 @@ net e0.temp.meas        <= i2c-temp.ch-01.value
 # ##################################################
 # Motion AIO and DIO
 # ##################################################
-net e0.fan.set          <= motion.analog-out-00
-net e0.temp.set-program <= motion.analog-out-01
-net ve-line-width       <= motion.analog-out-02
-net ve-line-height      <= motion.analog-out-03
-net ve-trigger-time     <= motion.analog-out-04
-net hb.temp.set-program <= motion.analog-out-05
-#net e1.fan.set          <= motion.analog-out-06
+net hbp.temp.set-program <= motion.analog-out-00
+#net hbc.temp.set-program <= motion.analog-out-01
+net e0.temp.set-program  <= motion.analog-out-02
+net f0.set-program       <= motion.analog-out-12
+net f1.set-program       <= motion.analog-out-13
+net f2.set-program       <= motion.analog-out-14
+net f3.set-program       <= motion.analog-out-15
+net l0.r-program         <= motion.analog-out-26
+net l0.g-program         <= motion.analog-out-27
+net l0.b-program         <= motion.analog-out-28
+net l0.w-program         <= motion.analog-out-29
+net probe.sel-f          <= motion.analog-out-38
+net probe.offset.x-program <= motion.analog-out-40
+net probe.offset.y-program <= motion.analog-out-41
+net probe.offset.z-program <= motion.analog-out-42
+net p0.x-program         <= motion.analog-out-43
+net p0.y-program         <= motion.analog-out-44
+net p1.x-program         <= motion.analog-out-45
+net p1.y-program         <= motion.analog-out-46
+net p2.x-program         <= motion.analog-out-47
+net p2.y-program         <= motion.analog-out-48
+net p3.x-program         <= motion.analog-out-49
+net p3.y-program         <= motion.analog-out-50
 
-net probe-enable        <= motion.digital-out-00
-net ve-trigger          <= motion.digital-out-02
+net hbp.temp.set-trigger <= motion.digital-out-00
+#net hbc.temp.set-trigger <= motion.digital-out-01
+net e0.temp.set-trigger  <= motion.digital-out-02
+net f0.set-trigger       <= motion.digital-out-12
+net f1.set-trigger       <= motion.digital-out-13
+net f2.set-trigger       <= motion.digital-out-14
+net f3.set-trigger       <= motion.digital-out-15
+net l0.r-trigger         <= motion.digital-out-26
+net l0.g-trigger         <= motion.digital-out-27
+net l0.b-trigger         <= motion.digital-out-28
+net l0.w-trigger         <= motion.digital-out-29
+net probe.enable         <= motion.digital-out-38
+net probe.offset.x-trigger <= motion.digital-out-40
+net probe.offset.y-trigger <= motion.digital-out-41
+net probe.offset.z-trigger <= motion.digital-out-42
+net p0.x-trigger         <= motion.digital-out-43
+net p0.y-trigger         <= motion.digital-out-44
+net p1.x-trigger         <= motion.digital-out-45
+net p1.y-trigger         <= motion.digital-out-46
+net p2.x-trigger         <= motion.digital-out-47
+net p2.y-trigger         <= motion.digital-out-48
+net p3.x-trigger         <= motion.digital-out-49
+net p3.y-trigger         <= motion.digital-out-50
 
-net e0.temp.in_range    => motion.digital-in-00
-net hb.temp.in_range    => motion.digital-in-01
+net hbp.temp.meas        => motion.analog-in-00
+#net hbc.temp.meas        => motion.analog-in-01
+net e0.temp.meas         => motion.analog-in-02
+net f0.set               => motion.analog-in-12
+net f1.set               => motion.analog-in-13
+net f2.set               => motion.analog-in-14
+net f3.set               => motion.analog-in-15
+net l0.r                 => motion.analog-in-26
+net l0.g                 => motion.analog-in-27
+net l0.b                 => motion.analog-in-28
+net l0.w                 => motion.analog-in-29
+net probe.offset.x       => motion.analog-in-40
+net probe.offset.y       => motion.analog-in-41
+net probe.offset.z       => motion.analog-in-42
+net p0.x                 => motion.analog-in-43
+net p0.y                 => motion.analog-in-44
+net p1.x                 => motion.analog-in-45
+net p1.y                 => motion.analog-in-46
+net p2.x                 => motion.analog-in-47
+net p2.y                 => motion.analog-in-48
+net p3.x                 => motion.analog-in-49
+net p3.y                 => motion.analog-in-50
+setp motion.analog-in-38 [PROBE]COUNT
+setp motion.analog-in-39 [PROBE]SEARCH_VEL
+sets probe.offset.x      [PROBE]OFFSET_X
+sets probe.offset.y      [PROBE]OFFSET_Y
+sets probe.offset.z      [PROBE]OFFSET_Z
+setp motion.analog-in-53 [AXIS_0]MIN_LIMIT
+setp motion.analog-in-54 [AXIS_1]MIN_LIMIT
+setp motion.analog-in-55 [AXIS_2]MIN_LIMIT
+
+net hbp.temp.in-range   => motion.digital-in-00
+#net hbc.temp.in-range   => motion.digital-in-00
+net e0.temp.in-range    => motion.digital-in-02
 
 # ##################################################
 # Estop chain, watchdog and charge-pump
 # ##################################################
 net estop-user          => estopchain.in-00
-net e0.temp.in_limit    => estopchain.in-01
-net e0.therm_working    => estopchain.in-02
-net hb.temp.in_limit    => estopchain.in-03
-net hb.therm_working    => estopchain.in-04
+net e0.temp.in-limit    => estopchain.in-01
+net e0.therm-ok         => estopchain.in-02
+net hbp.temp.in-limit   => estopchain.in-03
+net hbp.therm-ok        => estopchain.in-04
 net gpio-ok             => estopchain.in-05
 net pwm-ok              => estopchain.in-06
 net temp-ok             => estopchain.in-07
@@ -1121,11 +1225,26 @@ setp bb_gpio.p8.out-19.invert 1
 # UI linking
 # ##################################################
 
-net e0.temp.meas => fdm-e0.temp.meas
-net e0.temp.set => fdm-e0.temp.set
-net hb.temp.meas => fdm-hb.temp.meas
-net hb.temp.set => fdm-hb.temp.set
-net e0.fan.pwm => fdm-f0.pwm.set
+net hbp.temp.meas       => fdm-hbp.temp.meas
+net hbp.temp.set       <=> fdm-hbp.temp.set
+net hbp.temp.limit.min  => fdm-hbp.temp.limit.min
+net hbp.temp.limit.max  => fdm-hbp.temp.limit.max
+net hbp.temp.in-range   => fdm-hbp.temp.in-range
+net hbp.no-error        => fdm-hbp.no-error
+net e0.temp.meas        => fdm-e0.temp.meas
+net e0.temp.set        <=> fdm-e0.temp.set
+net e0.temp.limit.min   => fdm-e0.temp.limit.min
+net e0.temp.limit.max   => fdm-e0.temp.limit.max
+net e0.temp.in-range    => fdm-e0.temp.in-range
+net e0.no-error         => fdm-e0.no-error
+net f0.set             <=> fdm-f0.set
+net f1.set             <=> fdm-f1.set
+net f2.set             <=> fdm-f2.set
+net f3.set             <=> fdm-f3.set
+net l0.r               <=> fdm-l0.r
+net l0.g               <=> fdm-l0.g
+net l0.b               <=> fdm-l0.b
+net l0.w               <=> fdm-l0.w
 
 # monitor the estop error sources
 newg error-sources 100
@@ -1133,7 +1252,7 @@ newm error-sources estop-user
 newm error-sources gpio-ok
 newm error-sources pwm-ok
 newm error-sources temp-ok
-newm error-sources e0.temp.in_limit
-newm error-sources e0.therm_working
-newm error-sources hb.temp.in_limit
-newm error-sources hb.therm_working
+newm error-sources e0.temp.in-limit
+newm error-sources e0.therm-ok
+newm error-sources hbp.temp.in-limit
+newm error-sources hbp.therm-ok

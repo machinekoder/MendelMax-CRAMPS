@@ -1,3 +1,4 @@
+ 
 /******************************************************************************
  *
  * Copyright (C) 2014 Alexander Rössler
@@ -36,31 +37,23 @@
  *
  ******************************************************************************/
 
-component led_dim "LinuxCNC HAL component for dimming LEDs";
-pin in  u32   steps "Input steps";
-pin in  u32   max_pwm "PWM steps (usually 2^n)";
-pin in  float factor "The dim factor";
-pin in  float input "Input value -> 0 to 1";
-pin out float output "Output value -> 0 to 1";
+component in2io "LinuxCNC HAL component for coverting a input to a IO pin";
+pin in  float   in "Input";
+pin io  float   io "I/O";
+pin in  bit     trigger "Trigger for updating the input value";
 function _  fp "Update the output value";
 description """
-Component for dimming LEDs
+LinuxCNC HAL component for coverting a input to a IO pin
 .LP
-The output value can be tuned using the the factor input
+input is output
 """;
 license "GPL";
-variable float basis = 1.0;
-variable float lastInput = 0;
+variable int prev_trigger = 0;
 ;;
-#include <math.h>
 
 FUNCTION(_) {
-    float value;
-    if (lastInput != input) 
-    {
-        basis = pow((float)max_pwm/(float)factor, 1.0 / (float)(steps-1));
-        value = (factor*pow(basis, input*(float)steps))/((float)(max_pwm));
-        output = (value > 1.0) ? 1.0 : value;
-        lastInput = input;
+    if (trigger ^ prev_trigger) {
+        io = in;
+        prev_trigger = trigger;
     }
 }

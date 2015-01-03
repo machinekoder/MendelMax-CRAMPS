@@ -18,6 +18,7 @@ try:
     launcher.load_bbio_file('paralell_cape3.bbio')
     launcher.install_comp('thermistor_check.comp')
     launcher.install_comp('led_dim.comp')
+    launcher.install_comp('in2io.comp')
     launcher.start_process("configserver -n Uni-print-3D ~/Machineface")
     launcher.start_process('linuxcnc UNIPRINT-3D.ini')
 except subprocess.CalledProcessError:
