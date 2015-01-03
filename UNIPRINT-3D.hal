@@ -745,7 +745,6 @@ net pid.maxerrorI   pidctrl.maxerrorI => pid.e0-temp.maxerrorI
 net pid.bias        pidctrl.bias => pid.e0-temp.bias
 net e0.temp.meas => pidctrl.feedback
 net e0.heater =>    pidctrl.output
-net pid.enable      pidctrl.enable => mux2.e0-temp-set.sel
 
 # ##################################################
 # Extruder Multiplexer
