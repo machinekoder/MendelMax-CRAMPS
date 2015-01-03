@@ -180,17 +180,12 @@ newcomp fdm-f3 timer=100
 newpin fdm-f3 fdm-f3.set float io
 ready fdm-f3
 
-newcomp fdm-l0 timer=100 acceptdefaults
+newcomp fdm-l0 timer=100
 newpin fdm-l0 fdm-l0.r float io
 newpin fdm-l0 fdm-l0.g float io
 newpin fdm-l0 fdm-l0.b float io
 newpin fdm-l0 fdm-l0.w float io
 ready  fdm-l0
-
-setp fdm-l0.r 1.0
-setp fdm-l0.g 1.0
-setp fdm-l0.b 1.0
-setp fdm-l0.w 1.0
 
 # wait the halcmd script until the UI has created the remote component 'pidctrl':
 # waitexists pidctrl
@@ -743,13 +738,13 @@ setp thermistor-check.hbp.min-temp 1.5
 
 
 # PIDctrl
-net pid.Pgain       pidctrl.Pgain => pid.e0-temp.Pgain
-net pid.Igain       pidctrl.Igain => pid.e0-temp.Igain
-net pid.Dgain       pidctrl.Dgain => pid.e0-temp.Dgain
-net pid.maxerrorI   pidctrl.maxerrorI => pid.e0-temp.maxerrorI
-net pid.bias        pidctrl.bias => pid.e0-temp.bias
-net e0.temp.meas => pidctrl.feedback
-net e0.heater =>    pidctrl.output
+#net pid.Pgain       pidctrl.Pgain => pid.e0-temp.Pgain
+#net pid.Igain       pidctrl.Igain => pid.e0-temp.Igain
+#net pid.Dgain       pidctrl.Dgain => pid.e0-temp.Dgain
+#net pid.maxerrorI   pidctrl.maxerrorI => pid.e0-temp.maxerrorI
+#net pid.bias        pidctrl.bias => pid.e0-temp.bias
+#net e0.temp.meas => pidctrl.feedback
+#net e0.heater =>    pidctrl.output
 
 # ##################################################
 # Extruder Multiplexer
@@ -1229,6 +1224,11 @@ net l0.r               <=> fdm-l0.r
 net l0.g               <=> fdm-l0.g
 net l0.b               <=> fdm-l0.b
 net l0.w               <=> fdm-l0.w
+
+setp fdm-l0.r 1.0
+setp fdm-l0.g 1.0
+setp fdm-l0.b 1.0
+setp fdm-l0.w 1.0
 
 # monitor the estop error sources
 newg error-sources 100
