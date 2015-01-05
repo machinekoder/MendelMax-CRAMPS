@@ -45,7 +45,7 @@ loadrt mux2 names=mux2.exp0-pwm
 #loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
 loadrt in2io personality=51 names=in2io-motion
 loadrt logic names=estopchain personality=0x108 # and 8 inputs
-loadrt comp names=comp.exp0-temp,comp.hbp-hot
+loadrt comp names=comp.exp0-temp,comp.hbp-hot,comp.e0-active,comp.hbp-active
 loadrt select8 names=select8.extruder
 loadrt watchdog num_inputs=3
 loadrt mux_generic config=bb4 # mux-gen.00 for probe
@@ -70,6 +70,7 @@ addf   wcomp.hbp-temp-limit                 servo-thread
 addf   pid.hbp-temp.do-pid-calcs            servo-thread
 addf   limit1.hbp-heater                    servo-thread
 addf   and2.hbp-no-error                    servo-thread
+addf   comp.hbp-active                      servo-thread
 # E0
 addf   pid.e0-temp.do-pid-calcs             servo-thread
 addf   limit1.e0-heater                     servo-thread
@@ -80,6 +81,7 @@ addf   wcomp.e0-temp-range                  servo-thread
 addf   not.e0-temp-range                    servo-thread
 addf   wcomp.e0-temp-limit                  servo-thread
 addf   and2.e0-no-error                     servo-thread
+addf   comp.e0-active                       servo-thread
 # F0
 addf   scale.f0                             servo-thread
 # F1
@@ -156,6 +158,7 @@ newpin  fdm-e0 fdm-e0.temp.limit.min float in
 newpin  fdm-e0 fdm-e0.temp.limit.max float in
 newpin  fdm-e0 fdm-e0.temp.in-range  bit   in
 newpin  fdm-e0 fdm-e0.no-error       bit   in
+newpin  fdm-e0 fdm-e0.active         bit   in
 ready   fdm-e0
 
 newcomp fdm-hbp timer=100
@@ -165,6 +168,7 @@ newpin  fdm-hbp fdm-hbp.temp.limit.min float in
 newpin  fdm-hbp fdm-hbp.temp.limit.max float in
 newpin  fdm-hbp fdm-hbp.temp.in-range  bit   in
 newpin  fdm-hbp fdm-hbp.no-error       bit   in
+newpin  fdm-hbp fdm-hbp.active         bit   in
 ready   fdm-hbp
 
 newcomp fdm-f0 timer=100
@@ -571,6 +575,7 @@ newsig e0.temp.limit.max         float
 newsig e0.temp.in-limit          bit
 newsig e0.therm-ok               bit
 newsig e0.no-error               bit
+newsig e0.active                 bit
 
 newsig hbp.temp.set              float
 newsig hbp.temp.set-program      float
@@ -588,6 +593,7 @@ newsig hbp.temp.limit.max        float
 newsig hbp.temp.in-limit         bit
 newsig hbp.therm-ok              bit
 newsig hbp.no-error              bit
+newsig hbp.active                bit
 
 # Extruder 0 temperature control
 # --------------------------------------------------------------------------
@@ -644,8 +650,13 @@ net e0.therm-ok               <= thermistor-check.e0.out
 
 # no error chain
 net e0.therm-ok => and2.e0-no-error.in0
-net e0.in-limit => and2.e0-no-error.in1
+net e0.temp.in-limit => and2.e0-no-error.in1
 net e0.no-error <= and2.e0-no-error.out
+
+setp comp.e0-active.in0 0.0
+setp comp.e0-active.hyst 0.0
+net e0.heaterl => comp.e0-active.in1
+net e0.active  <= comp.e0-active.out
 
 # PID parameters
 #setp pid.e0-temp.FF0      0
@@ -717,8 +728,13 @@ net hbp.therm-ok               <= thermistor-check.hbp.out
 
 # no error chain
 net hbp.therm-ok => and2.hbp-no-error.in0
-net hbp.in-limit => and2.hbp-no-error.in1
+net hbp.temp.in-limit => and2.hbp-no-error.in1
 net hbp.no-error <= and2.hbp-no-error.out
+
+setp comp.hbp-active.in0 0.0
+setp comp.hbp-active.hyst 0.0
+net hbp.heaterl => comp.hbp-active.in1
+net hbp.active  <= comp.hbp-active.out
 
 # PID parameters
 #setp pid.hbp-temp.FF0      0
