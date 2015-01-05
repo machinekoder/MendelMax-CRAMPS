@@ -485,7 +485,8 @@ net home-z        => axis.2.home-sw-in
 #net limit-z-min => axis.2.home-sw-in
 #net limit-z-min => axis.2.neg-lim-sw-ingggg
 #net limit-z-max => axis.2.pos-lim-sw-in
-
+net homing <= axis.2.homing
+net homing => gantry.z.homing
 
 # ################
 # Probe
