@@ -20,14 +20,14 @@ loadrt trivkins
 loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=56 num_dio=56 #[TRAJ]AXES
 
 # THREADS
-loadrt threads name1=run-thread name2=check-thread period1=50170000 period2=300000000
+#loadrt threads name1=run-thread period1=50170000
 
 # Gantry component for Z Axis
 loadrt gantry names=gantry.z personality=2
 
 # load low-level drivers
-loadrt hal_bb_gpio output_pins=107,119,126,226 input_pins=241
-loadrt [PRUCONF](DRIVER) prucode=[PRUCONF](PRUBIN) [PRUCONF](CONFIG)
+loadrt hal_bb_gpio output_pins=807,819,826,926 input_pins=941
+loadrt [PRUCONF](DRIVER) prucode=[PRUCONF](PRUBIN) [PRUCONF](CONFIG) halname=hpg
 
 # other components
 loadrt pid names=pid.e0-temp,pid.hbp-temp
@@ -51,7 +51,7 @@ loadrt watchdog num_inputs=3
 loadrt mux_generic config=bb4 # mux-gen.00 for probe
 loadrt conv_float_u32 names=f2u.probe-sel
 
-addf   [PRUCONF](DRIVER).capture-position   servo-thread
+addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
 addf   gantry.z.read                        servo-thread
 addf   motion-command-handler               servo-thread
@@ -102,21 +102,19 @@ addf   select8.extruder                     servo-thread
 addf   comp.hbp-hot                         servo-thread
 
 # Estop chain
+addf   thermistor-check.e0                  servo-thread
+addf   thermistor-check.hbp                 servo-thread
 addf   watchdog.set-timeouts                servo-thread
 addf   watchdog.process                     servo-thread
 addf   estopchain                           servo-thread
 
 # Update functions
 addf   gantry.z.write                       servo-thread
-addf   [PRUCONF](DRIVER).update             servo-thread
+addf   hpg.update                           servo-thread
 addf   bb_gpio.write                        servo-thread
 
 
 #addf   charge-pump                         run-thread
-
-
-addf   thermistor-check.e0                  check-thread
-addf   thermistor-check.hbp                 check-thread
 
 
 # user components
@@ -237,34 +235,32 @@ newsig emcmot.00.enable bit
 sets emcmot.00.enable FALSE
 
 net emcmot.00.enable <= axis.0.amp-enable-out 
-net emcmot.00.enable => [PRUCONF](DRIVER).stepgen.00.enable
+net emcmot.00.enable => hpg.stepgen.00.enable
 
 
 # position command and feedback
 net emcmot.00.pos-cmd <= axis.0.motor-pos-cmd
-net emcmot.00.pos-cmd => [PRUCONF](DRIVER).stepgen.00.position-cmd
+net emcmot.00.pos-cmd => hpg.stepgen.00.position-cmd
 
-net motor.00.pos-fb <= [PRUCONF](DRIVER).stepgen.00.position-fb
+net motor.00.pos-fb <= hpg.stepgen.00.position-fb
 net motor.00.pos-fb => axis.0.motor-pos-fb
 
 
 # timing parameters
-setp [PRUCONF](DRIVER).stepgen.00.dirsetup        [AXIS_0]DIRSETUP
-setp [PRUCONF](DRIVER).stepgen.00.dirhold         [AXIS_0]DIRHOLD
+setp hpg.stepgen.00.dirsetup        [AXIS_0]DIRSETUP
+setp hpg.stepgen.00.dirhold         [AXIS_0]DIRHOLD
 
-setp [PRUCONF](DRIVER).stepgen.00.steplen         [AXIS_0]STEPLEN
-setp [PRUCONF](DRIVER).stepgen.00.stepspace       [AXIS_0]STEPSPACE
+setp hpg.stepgen.00.steplen         [AXIS_0]STEPLEN
+setp hpg.stepgen.00.stepspace       [AXIS_0]STEPSPACE
 
-setp [PRUCONF](DRIVER).stepgen.00.position-scale  [AXIS_0]SCALE
+setp hpg.stepgen.00.position-scale  [AXIS_0]SCALE
 
-setp [PRUCONF](DRIVER).stepgen.00.maxvel          [AXIS_0]STEPGEN_MAX_VEL
-setp [PRUCONF](DRIVER).stepgen.00.maxaccel        [AXIS_0]STEPGEN_MAX_ACC
+setp hpg.stepgen.00.maxvel          [AXIS_0]STEPGEN_MAX_VEL
+setp hpg.stepgen.00.maxaccel        [AXIS_0]STEPGEN_MAX_ACC
 
-#setp [PRUCONF](DRIVER).stepgen.00.step_type       0
-# P8.12
-setp [PRUCONF](DRIVER).stepgen.00.steppin         0x4C
-# P8.11
-setp [PRUCONF](DRIVER).stepgen.00.dirpin          0x4D
+#setp hpg.stepgen.00.step_type       0
+setp hpg.stepgen.00.steppin         [AXIS_0]STEPPIN
+setp hpg.stepgen.00.dirpin          [AXIS_0]DIRPIN
 
 
 # ################
@@ -276,34 +272,32 @@ newsig emcmot.01.enable bit
 sets emcmot.01.enable FALSE
 
 net emcmot.01.enable <= axis.1.amp-enable-out 
-net emcmot.01.enable => [PRUCONF](DRIVER).stepgen.01.enable
+net emcmot.01.enable => hpg.stepgen.01.enable
 
 
 # position command and feedback
 net emcmot.01.pos-cmd <= axis.1.motor-pos-cmd
-net emcmot.01.pos-cmd => [PRUCONF](DRIVER).stepgen.01.position-cmd
+net emcmot.01.pos-cmd => hpg.stepgen.01.position-cmd
 
-net motor.01.pos-fb <= [PRUCONF](DRIVER).stepgen.01.position-fb
+net motor.01.pos-fb <= hpg.stepgen.01.position-fb
 net motor.01.pos-fb => axis.1.motor-pos-fb
 
 
 # timing parameters
-setp [PRUCONF](DRIVER).stepgen.01.dirsetup        [AXIS_1]DIRSETUP
-setp [PRUCONF](DRIVER).stepgen.01.dirhold         [AXIS_1]DIRHOLD
+setp hpg.stepgen.01.dirsetup        [AXIS_1]DIRSETUP
+setp hpg.stepgen.01.dirhold         [AXIS_1]DIRHOLD
 
-setp [PRUCONF](DRIVER).stepgen.01.steplen         [AXIS_1]STEPLEN
-setp [PRUCONF](DRIVER).stepgen.01.stepspace       [AXIS_1]STEPSPACE
+setp hpg.stepgen.01.steplen         [AXIS_1]STEPLEN
+setp hpg.stepgen.01.stepspace       [AXIS_1]STEPSPACE
 
-setp [PRUCONF](DRIVER).stepgen.01.position-scale  [AXIS_1]SCALE
+setp hpg.stepgen.01.position-scale  [AXIS_1]SCALE
 
-setp [PRUCONF](DRIVER).stepgen.01.maxvel          [AXIS_1]STEPGEN_MAX_VEL
-setp [PRUCONF](DRIVER).stepgen.01.maxaccel        [AXIS_1]STEPGEN_MAX_ACC
+setp hpg.stepgen.01.maxvel          [AXIS_1]STEPGEN_MAX_VEL
+setp hpg.stepgen.01.maxaccel        [AXIS_1]STEPGEN_MAX_ACC
 
-#setp [PRUCONF](DRIVER).stepgen.01.step_type       0
-# P8.16
-setp [PRUCONF](DRIVER).stepgen.01.steppin         0x4E
-# P8.15
-setp [PRUCONF](DRIVER).stepgen.01.dirpin          0x4F
+#setp hpg.stepgen.01.step_type       0
+setp hpg.stepgen.01.steppin         [AXIS_1]STEPPIN
+setp hpg.stepgen.01.dirpin          [AXIS_1]DIRPIN
 
 
 # ################
@@ -315,38 +309,36 @@ newsig emcmot.02.enable bit
 sets emcmot.02.enable FALSE
 
 net emcmot.02.enable <= axis.2.amp-enable-out 
-net emcmot.02.enable => [PRUCONF](DRIVER).stepgen.02.enable
+net emcmot.02.enable => hpg.stepgen.02.enable
 
-setp gantry.z.search-vel                         [AXIS_2]HOME_SEARCH_VEL
+setp gantry.z.search-vel            [AXIS_2]HOME_SEARCH_VEL
 
 # position command and feedback
 net emcmot.02.pos-cmd <= axis.2.motor-pos-cmd
 net emcmot.02.pos-cmd => gantry.z.position-cmd
 net motor.02.pos-cmd <= gantry.z.joint.00.pos-cmd
-net motor.02.pos-cmd => [PRUCONF](DRIVER).stepgen.02.position-cmd
+net motor.02.pos-cmd => hpg.stepgen.02.position-cmd
 
 net emcmot.02.pos-fb <= gantry.z.position-fb
 net emcmot.02.pos-fb => axis.2.motor-pos-fb
-net motor.02.pos-fb <= [PRUCONF](DRIVER).stepgen.02.position-fb
+net motor.02.pos-fb <= hpg.stepgen.02.position-fb
 net motor.02.pos-fb => gantry.z.joint.00.pos-fb
 
 # timing parameters
-setp [PRUCONF](DRIVER).stepgen.02.dirsetup        [AXIS_2]DIRSETUP
-setp [PRUCONF](DRIVER).stepgen.02.dirhold         [AXIS_2]DIRHOLD
+setp hpg.stepgen.02.dirsetup        [AXIS_2]DIRSETUP
+setp hpg.stepgen.02.dirhold         [AXIS_2]DIRHOLD
 
-setp [PRUCONF](DRIVER).stepgen.02.steplen         [AXIS_2]STEPLEN
-setp [PRUCONF](DRIVER).stepgen.02.stepspace       [AXIS_2]STEPSPACE
+setp hpg.stepgen.02.steplen         [AXIS_2]STEPLEN
+setp hpg.stepgen.02.stepspace       [AXIS_2]STEPSPACE
 
-setp [PRUCONF](DRIVER).stepgen.02.position-scale  [AXIS_2]SCALE
+setp hpg.stepgen.02.position-scale  [AXIS_2]SCALE
 
-setp [PRUCONF](DRIVER).stepgen.02.maxvel          [AXIS_2]STEPGEN_MAX_VEL
-setp [PRUCONF](DRIVER).stepgen.02.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
+setp hpg.stepgen.02.maxvel          [AXIS_2]STEPGEN_MAX_VEL
+setp hpg.stepgen.02.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
 
-#setp [PRUCONF](DRIVER).stepgen.02.step_type       0
-# P9.13
-setp [PRUCONF](DRIVER).stepgen.02.steppin         63
-# P9.25
-setp [PRUCONF](DRIVER).stepgen.02.dirpin          149
+#setp hpg.stepgen.02.step_type       0
+setp hpg.stepgen.02.steppin         [AXIS_2]STEPPIN_RIGHT
+setp hpg.stepgen.02.dirpin          [AXIS_2]DIRPIN_RIGHT
 
 
 # ################
@@ -358,32 +350,30 @@ setp [PRUCONF](DRIVER).stepgen.02.dirpin          149
 #sets emcmot.03.enable FALSE
 
 #net emcmot.03.enable <= axis.2.amp-enable-out 
-net emcmot.02.enable => [PRUCONF](DRIVER).stepgen.03.enable
+net emcmot.02.enable => hpg.stepgen.03.enable
 
 # position command and feedback
 net motor.03.pos-cmd <= gantry.z.joint.01.pos-cmd
-net motor.03.pos-cmd => [PRUCONF](DRIVER).stepgen.03.position-cmd
+net motor.03.pos-cmd => hpg.stepgen.03.position-cmd
 
-net motor.03.pos-fb <= [PRUCONF](DRIVER).stepgen.03.position-fb
+net motor.03.pos-fb <= hpg.stepgen.03.position-fb
 net motor.03.pos-fb => gantry.z.joint.01.pos-fb
 
 # timing parameters
-setp [PRUCONF](DRIVER).stepgen.03.dirsetup        [AXIS_2]DIRSETUP
-setp [PRUCONF](DRIVER).stepgen.03.dirhold         [AXIS_2]DIRHOLD
+setp hpg.stepgen.03.dirsetup        [AXIS_2]DIRSETUP
+setp hpg.stepgen.03.dirhold         [AXIS_2]DIRHOLD
 
-setp [PRUCONF](DRIVER).stepgen.03.steplen         [AXIS_2]STEPLEN
-setp [PRUCONF](DRIVER).stepgen.03.stepspace       [AXIS_2]STEPSPACE
+setp hpg.stepgen.03.steplen         [AXIS_2]STEPLEN
+setp hpg.stepgen.03.stepspace       [AXIS_2]STEPSPACE
 
-setp [PRUCONF](DRIVER).stepgen.03.position-scale  [AXIS_2]SCALE
+setp hpg.stepgen.03.position-scale  [AXIS_2]SCALE
 
-setp [PRUCONF](DRIVER).stepgen.03.maxvel          [AXIS_2]STEPGEN_MAX_VEL
-setp [PRUCONF](DRIVER).stepgen.03.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
+setp hpg.stepgen.03.maxvel          [AXIS_2]STEPGEN_MAX_VEL
+setp hpg.stepgen.03.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
 
-#setp [PRUCONF](DRIVER).stepgen.03.step_type       0
-# P9.22
-setp [PRUCONF](DRIVER).stepgen.03.steppin         34
-# P9.21
-setp [PRUCONF](DRIVER).stepgen.03.dirpin          35
+#setp hpg.stepgen.03.step_type       0
+setp hpg.stepgen.03.steppin         [AXIS_2]STEPPIN_LEFT
+setp hpg.stepgen.03.dirpin          [AXIS_2]DIRPIN_LEFT
 
 
 # ################
@@ -395,34 +385,30 @@ newsig emcmot.03.enable bit
 sets emcmot.03.enable FALSE
 
 net emcmot.03.enable <= axis.3.amp-enable-out 
-net emcmot.03.enable => [PRUCONF](DRIVER).stepgen.04.enable
+net emcmot.03.enable => hpg.stepgen.04.enable
 
 # position command and feedback
 net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
-net emcmot.03.pos-cmd => [PRUCONF](DRIVER).stepgen.04.position-cmd
+net emcmot.03.pos-cmd => hpg.stepgen.04.position-cmd
 
-net motor.04.pos-fb <= [PRUCONF](DRIVER).stepgen.04.position-fb
+net motor.04.pos-fb <= hpg.stepgen.04.position-fb
 net motor.04.pos-fb => axis.3.motor-pos-fb
 
 # timing parameters
-setp [PRUCONF](DRIVER).stepgen.04.dirsetup        [AXIS_3]DIRSETUP
-setp [PRUCONF](DRIVER).stepgen.04.dirhold         [AXIS_3]DIRHOLD
+setp hpg.stepgen.04.dirsetup        [AXIS_3]DIRSETUP
+setp hpg.stepgen.04.dirhold         [AXIS_3]DIRHOLD
 
-setp [PRUCONF](DRIVER).stepgen.04.steplen         [AXIS_3]STEPLEN
-setp [PRUCONF](DRIVER).stepgen.04.stepspace       [AXIS_3]STEPSPACE
+setp hpg.stepgen.04.steplen         [AXIS_3]STEPLEN
+setp hpg.stepgen.04.stepspace       [AXIS_3]STEPSPACE
 
-setp [PRUCONF](DRIVER).stepgen.04.position-scale  [AXIS_3]SCALE
+setp hpg.stepgen.04.position-scale  [AXIS_3]SCALE
 
-setp [PRUCONF](DRIVER).stepgen.04.maxvel          [AXIS_3]STEPGEN_MAX_VEL
-setp [PRUCONF](DRIVER).stepgen.04.maxaccel        [AXIS_3]STEPGEN_MAX_ACC
+setp hpg.stepgen.04.maxvel          [AXIS_3]STEPGEN_MAX_VEL
+setp hpg.stepgen.04.maxaccel        [AXIS_3]STEPGEN_MAX_ACC
 
-#setp [PRUCONF](DRIVER).stepgen.04.control-type    1
-
-#setp [PRUCONF](DRIVER).stepgen.04.step_type       0
-# P9.11
-setp [PRUCONF](DRIVER).stepgen.04.steppin         62
-# P9.42
-setp [PRUCONF](DRIVER).stepgen.04.dirpin          39
+#setp hpg.stepgen.04.step_type       0
+setp hpg.stepgen.04.steppin         [AXIS_3]STEPPIN
+setp hpg.stepgen.04.dirpin          [AXIS_3]DIRPIN
 
 
 # ##################################################
@@ -458,19 +444,21 @@ net emcmot.00.enable => bb_gpio.p8.out-26
 # ################
 # Limit Switches
 # ################
-newsig limit-x-home bit
-newsig limit-y-home bit
-newsig limit-zl-home bit
-newsig limit-zr-home bit
-newsig limit-x-min bit
-newsig limit-x-max bit
-newsig limit-y-min bit
-newsig limit-y-max bit
-newsig limit-z-min bit
-newsig limit-z-max bit
-newsig home-z      bit
-newsig home-x      bit
-newsig home-y      bit
+newsig limit-x-home   bit
+newsig limit-y-home   bit
+newsig limit-zl-home  bit
+newsig limit-zr-home  bit
+newsig limit-x-min    bit
+newsig limit-x-max    bit
+newsig limit-y-min    bit
+newsig limit-y-max    bit
+newsig limit-z-min    bit
+newsig limit-z-max    bit
+newsig home-z         bit
+newsig home-x         bit
+newsig home-y         bit
+newsig home-offset-zr float
+newsig home-offset-zl float
 
 net home-z      <= gantry.z.home
 
@@ -492,48 +480,29 @@ net home-z        => axis.2.home-sw-in
 net homing <= axis.2.homing
 net homing => gantry.z.homing
 
+net home-offset-zr => gantry.z.joint.00.home-offset
+net home-offset-zl => gantry.z.joint.01.home-offset
+
 # ################
 # Probe
 # ################
 newsig probe.input              bit
 newsig probe.enable             bit
 newsig probe.signal             bit
-newsig probe.muxed               bit
+newsig probe.muxed              bit
 newsig probe.sel                u32
-newsig probe.sel-f               float
+newsig probe.sel-f              float
 newsig probe.offset.x           float
 newsig probe.offset.y           float
 newsig probe.offset.z           float
-newsig probe.offset.x-program   float
-newsig probe.offset.y-program   float
-newsig probe.offset.z-program   float
-newsig probe.offset.x-trigger   bit
-newsig probe.offset.y-trigger   bit
-newsig probe.offset.z-trigger   bit
 newsig p0.x           float
 newsig p0.y           float
-newsig p0.x-program   float
-newsig p0.y-program   float
-newsig p0.x-trigger   bit
-newsig p0.y-trigger   bit
 newsig p1.x           float
 newsig p1.y           float
-newsig p1.x-program   float
-newsig p1.y-program   float
-newsig p1.x-trigger   bit
-newsig p1.y-trigger   bit
 newsig p2.x           float
 newsig p2.y           float
-newsig p2.x-program   float
-newsig p2.y-program   float
-newsig p2.x-trigger   bit
-newsig p2.y-trigger   bit
 newsig p3.x           float
 newsig p3.y           float
-newsig p3.x-program   float
-newsig p3.y-program   float
-newsig p3.x-trigger   bit
-newsig p3.y-trigger   bit
 
 net probe.sel-f => f2u.probe-sel.in
 net probe.sel  <= f2u.probe-sel.out
@@ -555,11 +524,9 @@ net probe.input  => motion.probe-input
 # Temperature Signals
 # ##################################################
 
-# Define signals to use elsewhere (ie: M1xx codes)
-# If you change any names here, lots of things will break!
+# Extruder 0 temperature control
+# --------------------------------------------------------------------------
 newsig e0.temp.set               float
-newsig e0.temp.set-program       float
-newsig e0.temp.set-trigger       bit
 newsig e0.temp.meas              float
 newsig e0.temp.measl             float
 newsig e0.temp.range.pos_error   float
@@ -577,29 +544,6 @@ newsig e0.therm-ok               bit
 newsig e0.no-error               bit
 newsig e0.active                 bit
 
-newsig hbp.temp.set              float
-newsig hbp.temp.set-program      float
-newsig hbp.temp.set-trigger      bit
-newsig hbp.temp.meas             float
-newsig hbp.temp.range.pos_error  float
-newsig hbp.temp.range.neg_error  float
-newsig hbp.temp.range.max        float
-newsig hbp.temp.range.min        float
-newsig hbp.temp.in-range         bit
-newsig hbp.temp.pwm              float
-newsig hbp.temp.pwm.max          float
-newsig hbp.temp.limit.min        float
-newsig hbp.temp.limit.max        float
-newsig hbp.temp.in-limit         bit
-newsig hbp.therm-ok              bit
-newsig hbp.no-error              bit
-newsig hbp.active                bit
-
-# Extruder 0 temperature control
-# --------------------------------------------------------------------------
-# Machine dependent
-net e0.temp.set-user    <= pidctrl.command
-
 # PID
 net emcmot.00.enable  =>   pid.e0-temp.enable
 net e0.temp.meas   => pid.e0-temp.feedback
@@ -612,7 +556,6 @@ net e0.heaterl     <= limit1.e0-heater.out
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.e0-heater.min 0.0
 setp limit1.e0-heater.max [EXTRUDER_0]PWM_MAX
-#net e0.temp.pwm.max => limit1.e0-heater.max
 net e0.temp.pwm.max => pid.e0-temp.maxoutput
 sets e0.temp.pwm.max [EXTRUDER_0]PWM_MAX
 
@@ -646,7 +589,7 @@ net e0.temp.in-range          => not.e0-temp-range.in
 net e0.temp.in-range_n        <= not.e0-temp-range.out
 net e0.temp.in-range_n        => thermistor-check.e0.enable
 net e0.heaterl                => thermistor-check.e0.pid
-net e0.therm-ok               <= thermistor-check.e0.out
+net e0.therm-ok               <= thermistor-check.e0.no-error
 
 # no error chain
 net e0.therm-ok => and2.e0-no-error.in0
@@ -675,13 +618,28 @@ sets e0.temp.range.lowpassgain [EXTRUDER_0]TEMP_RANGE_LOWPASSGAIN
 sets e0.temp.limit.min         [EXTRUDER_0]TEMP_LIMIT_MIN
 sets e0.temp.limit.max         [EXTRUDER_0]TEMP_LIMIT_MAX
 
-setp thermistor-check.e0.wait 30
+setp thermistor-check.e0.wait 9.0
 setp thermistor-check.e0.min-pid 0.25
 setp thermistor-check.e0.min-temp 1.5
 
 
 # Bed temperature control
 # ----------------------------------------------------------------------------
+newsig hbp.temp.set              float
+newsig hbp.temp.meas             float
+newsig hbp.temp.range.pos_error  float
+newsig hbp.temp.range.neg_error  float
+newsig hbp.temp.range.max        float
+newsig hbp.temp.range.min        float
+newsig hbp.temp.in-range         bit
+newsig hbp.temp.pwm              float
+newsig hbp.temp.pwm.max          float
+newsig hbp.temp.limit.min        float
+newsig hbp.temp.limit.max        float
+newsig hbp.temp.in-limit         bit
+newsig hbp.therm-ok              bit
+newsig hbp.no-error              bit
+newsig hbp.active                bit
 
 # PID
 net emcmot.00.enable => pid.hbp-temp.enable
@@ -695,7 +653,6 @@ net hbp.heaterl      <= limit1.hbp-heater.out
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.hbp-heater.min 0
 setp limit1.hbp-heater.max [HBP]PWM_MAX
-#net hbp.temp.pwm.max => limit1.hbp-heater.max
 net hbp.temp.pwm.max => pid.hbp-temp.maxoutput
 sets hbp.temp.pwm.max [HBP]PWM_MAX
 
@@ -714,7 +671,7 @@ net hbp.temp.in-range <= wcomp.hbp-temp-range.out
 
 # limit the output temperature to prevent damage when thermistor is broken/removed
 net hbp.temp.limit.min         => wcomp.hbp-temp-limit.min
-net hbp.temp.limit.max        => wcomp.hbp-temp-limit.max
+net hbp.temp.limit.max         => wcomp.hbp-temp-limit.max
 net hbp.temp.meas              => wcomp.hbp-temp-limit.in
 net hbp.temp.in-limit          <= wcomp.hbp-temp-limit.out
 
@@ -724,7 +681,7 @@ net hbp.temp.in-range          => not.hbp-temp-range.in
 net hbp.temp.in-range_n        <= not.hbp-temp-range.out
 net hbp.temp.in-range_n        => thermistor-check.hbp.enable
 net hbp.heaterl                => thermistor-check.hbp.pid
-net hbp.therm-ok               <= thermistor-check.hbp.out
+net hbp.therm-ok               <= thermistor-check.hbp.no-error
 
 # no error chain
 net hbp.therm-ok => and2.hbp-no-error.in0
@@ -752,7 +709,7 @@ sets hbp.temp.range.neg_error [HBP]TEMP_RANGE_NEG_ERROR
 sets hbp.temp.limit.min       [HBP]TEMP_LIMIT_MIN
 sets hbp.temp.limit.max       [HBP]TEMP_LIMIT_MAX
 
-setp thermistor-check.hbp.wait 60
+setp thermistor-check.hbp.wait 18.0
 setp thermistor-check.hbp.min-pid 0.3
 setp thermistor-check.hbp.min-temp 1.5
 
@@ -790,14 +747,6 @@ newsig l0.r           float
 newsig l0.g           float
 newsig l0.b           float
 newsig l0.w           float
-newsig l0.r-program   float
-newsig l0.g-program   float
-newsig l0.b-program   float
-newsig l0.w-program   float
-newsig l0.r-trigger   bit
-newsig l0.g-trigger   bit
-newsig l0.b-trigger   bit
-newsig l0.w-trigger   bit
 newsig l0.r-out       float
 newsig l0.g-out       float
 newsig l0.b-out       float
@@ -844,8 +793,6 @@ net l0.hbp-hot <= comp.hbp-hot.out
 # F0
 # ---------------------------
 newsig f0.set           float
-newsig f0.set-program   float
-newsig f0.set-trigger   bit
 newsig f0.pwm           float
 # ---------------------------
 setp scale.f0.gain 0.00392156862745
@@ -855,8 +802,6 @@ net f0.pwm <= scale.f0.out
 # F1
 # ---------------------------
 newsig f1.set           float
-newsig f1.set-program   float
-newsig f1.set-trigger   bit
 newsig f1.pwm           float
 # ---------------------------
 setp scale.f1.gain 0.00392156862745
@@ -866,8 +811,6 @@ net f1.pwm <= scale.f1.out
 # F2
 # ---------------------------
 newsig f2.set           float
-newsig f2.set-program   float
-newsig f2.set-trigger   bit
 newsig f2.pwm           float
 # ---------------------------
 setp scale.f2.gain 0.00392156862745
@@ -877,8 +820,6 @@ net f2.pwm <= scale.f2.out
 # F3
 # ---------------------------
 newsig f3.set           float
-newsig f3.set-program   float
-newsig f3.set-trigger   bit
 newsig f3.pwm           float
 # ---------------------------
 setp scale.f3.gain 0.00392156862745
@@ -1001,7 +942,7 @@ net e3.enable     => i2c-gpio.B.out-03
 net l0.hbp-info   => i2c-gpio.B.out-04
 net l0.hbp-hot    => i2c-gpio.B.out-05
 net pwr-mon       <= i2c-gpio.B.in-06
-net hbp-mon        <= i2c-gpio.B.in-07
+net hbp-mon       <= i2c-gpio.B.in-07
 
 # Adjust as needed for your switch polarity
 setp i2c-gpio.A.in-00.invert 1
@@ -1048,6 +989,7 @@ net e0.temp.meas         <= i2c-temp.ch-01.value
 # ##################################################
 # Motion AIO and DIO
 # ##################################################
+
 net hbp.temp.set-program <= motion.analog-out-00
 #net hbc.temp.set-program <= motion.analog-out-01
 net e0.temp.set-program  <= motion.analog-out-02
@@ -1206,6 +1148,8 @@ net pwm-ok              => estopchain.in-06
 net temp-ok             => estopchain.in-07
 net estop-out           <= estopchain.and
 
+# TODO watchdog
+
 net gpio-watchdog => watchdog.input-0
 setp watchdog.timeout-0 0.1
 net pwm-watchdog => watchdog.input-1
@@ -1245,13 +1189,6 @@ net l0.g               <=> fdm-l0.g
 net l0.b               <=> fdm-l0.b
 net l0.w               <=> fdm-l0.w
 
-net l0.r               <=> storage.l0.r
-net l0.g               <=> storage.l0.g
-net l0.b               <=> storage.l0.b
-net l0.w               <=> storage.l0.w
-
-setp storage.read-trigger 1 # trigger read
-
 # monitor the estop error sources
 newg error-sources 100
 newm error-sources estop-user
@@ -1262,3 +1199,16 @@ newm error-sources e0.temp.in-limit
 newm error-sources e0.therm-ok
 newm error-sources hbp.temp.in-limit
 newm error-sources hbp.therm-ok
+
+# ##################################################
+# Storage
+# ##################################################
+
+net l0.r               <=> storage.l0.r
+net l0.g               <=> storage.l0.g
+net l0.b               <=> storage.l0.b
+net l0.w               <=> storage.l0.w
+net home-offset-zr     <=> storage.gantry.home-offset-zr
+net home-offset-zl     <=> storage.gantry.home-offset-zl
+
+setp storage.read-trigger 1 # trigger read
