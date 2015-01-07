@@ -596,7 +596,7 @@ net e0.therm-ok => and2.e0-no-error.in0
 net e0.temp.in-limit => and2.e0-no-error.in1
 net e0.no-error <= and2.e0-no-error.out
 
-setp comp.e0-active.in0 0.0
+setp comp.e0-active.in0 0.0001
 setp comp.e0-active.hyst 0.0
 net e0.heaterl => comp.e0-active.in1
 net e0.active  <= comp.e0-active.out
@@ -688,7 +688,7 @@ net hbp.therm-ok => and2.hbp-no-error.in0
 net hbp.temp.in-limit => and2.hbp-no-error.in1
 net hbp.no-error <= and2.hbp-no-error.out
 
-setp comp.hbp-active.in0 0.0
+setp comp.hbp-active.in0 0.0001
 setp comp.hbp-active.hyst 0.0
 net hbp.heaterl => comp.hbp-active.in1
 net hbp.active  <= comp.hbp-active.out
@@ -1174,12 +1174,14 @@ net hbp.temp.limit.min  => fdm-hbp.temp.limit.min
 net hbp.temp.limit.max  => fdm-hbp.temp.limit.max
 net hbp.temp.in-range   => fdm-hbp.temp.in-range
 net hbp.no-error        => fdm-hbp.no-error
+net hbp.active          => fdm-hbp.active
 net e0.temp.meas        => fdm-e0.temp.meas
 net e0.temp.set        <=> fdm-e0.temp.set
 net e0.temp.limit.min   => fdm-e0.temp.limit.min
 net e0.temp.limit.max   => fdm-e0.temp.limit.max
 net e0.temp.in-range    => fdm-e0.temp.in-range
 net e0.no-error         => fdm-e0.no-error
+net e0.active           => fdm-e0.active
 net f0.set             <=> fdm-f0.set
 net f1.set             <=> fdm-f1.set
 net f2.set             <=> fdm-f2.set
