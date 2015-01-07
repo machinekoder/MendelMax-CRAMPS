@@ -492,9 +492,6 @@ newsig probe.signal             bit
 newsig probe.muxed              bit
 newsig probe.sel                u32
 newsig probe.sel-f              float
-newsig probe.offset.x           float
-newsig probe.offset.y           float
-newsig probe.offset.z           float
 newsig p0.x           float
 newsig p0.y           float
 newsig p1.x           float
@@ -1002,9 +999,6 @@ net l0.g-program         <= motion.analog-out-27
 net l0.b-program         <= motion.analog-out-28
 net l0.w-program         <= motion.analog-out-29
 net probe.sel-f          <= motion.analog-out-38
-net probe.offset.x-program <= motion.analog-out-40
-net probe.offset.y-program <= motion.analog-out-41
-net probe.offset.z-program <= motion.analog-out-42
 net p0.x-program         <= motion.analog-out-43
 net p0.y-program         <= motion.analog-out-44
 net p1.x-program         <= motion.analog-out-45
@@ -1026,9 +1020,6 @@ net l0.g-trigger         <= motion.digital-out-27
 net l0.b-trigger         <= motion.digital-out-28
 net l0.w-trigger         <= motion.digital-out-29
 net probe.enable         <= motion.digital-out-38
-net probe.offset.x-trigger <= motion.digital-out-40
-net probe.offset.y-trigger <= motion.digital-out-41
-net probe.offset.z-trigger <= motion.digital-out-42
 net p0.x-trigger         <= motion.digital-out-43
 net p0.y-trigger         <= motion.digital-out-44
 net p1.x-trigger         <= motion.digital-out-45
@@ -1049,9 +1040,6 @@ net l0.r                 => motion.analog-in-26
 net l0.g                 => motion.analog-in-27
 net l0.b                 => motion.analog-in-28
 net l0.w                 => motion.analog-in-29
-net probe.offset.x       => motion.analog-in-40
-net probe.offset.y       => motion.analog-in-41
-net probe.offset.z       => motion.analog-in-42
 net p0.x                 => motion.analog-in-43
 net p0.y                 => motion.analog-in-44
 net p1.x                 => motion.analog-in-45
@@ -1060,9 +1048,6 @@ net p2.x                 => motion.analog-in-47
 net p2.y                 => motion.analog-in-48
 net p3.x                 => motion.analog-in-49
 net p3.y                 => motion.analog-in-50
-sets probe.offset.x      [PROBE]OFFSET_X
-sets probe.offset.y      [PROBE]OFFSET_Y
-sets probe.offset.z      [PROBE]OFFSET_Z
 
 net hbp.temp.in-range   => motion.digital-in-00
 #net hbc.temp.in-range   => motion.digital-in-01
@@ -1101,15 +1086,6 @@ net l0.b                <= in2io-motion.io.28
 net l0.w-program        => in2io-motion.in.29
 net l0.w-trigger        => in2io-motion.trigger.29
 net l0.w                <= in2io-motion.io.29
-net probe.offset.x-program => in2io-motion.in.40
-net probe.offset.x-trigger => in2io-motion.trigger.40
-net probe.offset.x         <= in2io-motion.io.40
-net probe.offset.y-program => in2io-motion.in.41
-net probe.offset.y-trigger => in2io-motion.trigger.41
-net probe.offset.y         <= in2io-motion.io.41
-net probe.offset.z-program => in2io-motion.in.42
-net probe.offset.z-trigger => in2io-motion.trigger.42
-net probe.offset.z         <= in2io-motion.io.42
 net p0.x-program        => in2io-motion.in.43
 net p0.x-trigger        => in2io-motion.trigger.43
 net p0.x                <= in2io-motion.io.43
