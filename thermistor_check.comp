@@ -43,7 +43,7 @@ pin in  float   pid       "Output of PID control";
 pin in  float   min_pid   "The minimum PID control output to react to";
 pin in  float   wait      "Time to wait before triggering an error in secods";
 pin in  bit     enable    "Enables or disables the component, out is TRUE when disabled";
-pin out bit     no-error  "Output value -> TRUE when the thermistor works as exspected";
+pin out bit     no_error  "Output value -> TRUE when the thermistor works as exspected";
 pin out bit     error     "Error value -> FALSE when the thermistor works as exspected";
 function _  fp "Update the output value";
 description """
@@ -114,12 +114,12 @@ FUNCTION(_) {
 
                 if (temp_change >= min_temp)    // correct
                 {
-                    out = 1;
+                    no_error = 1;
                     error = 0;
                 }
                 else
                 {
-                    out = 0;
+                    no_error = 0;
                     error = 1;
                 }
             }
@@ -128,7 +128,7 @@ FUNCTION(_) {
     else
     {
         start = 1;
-        out = 1;
+        no_error = 1;
         error = 0;
     }
 }
