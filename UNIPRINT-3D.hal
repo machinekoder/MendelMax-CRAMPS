@@ -38,12 +38,11 @@ loadrt charge_pump
 loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hbp
 loadrt not names=not.e0-temp-range,not.hbp-temp-range,not.e0-error,not.hbp-error
 loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,wcomp.hbp-temp-limit
-loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range,lowpass.e0-temp,lowpass.hbp-temp
+loadrt lowpass names=lowpass.e0-temp,lowpass.hbp-temp
 loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
 loadrt and2 names=and2.probe
 loadrt mux2 names=mux2.exp0-pwm
-#loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
-loadrt in2io personality=51 names=in2io-motion
+loadrt in2io personality=40 names=in2io-motion
 loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103,0x103 # and 8 and 3 inputs
 loadrt comp names=comp.exp0-temp,comp.hbp-hot,comp.e0-active,comp.hbp-active
 loadrt select8 names=select8.extruder
@@ -62,13 +61,12 @@ addf   motion-controller                    servo-thread
 addf   in2io-motion                         servo-thread
 # HBP
 addf   lowpass.hbp-temp                     servo-thread
+addf   pid.hbp-temp.do-pid-calcs            servo-thread
 addf   sum2.hbp-temp-range-neg              servo-thread
 addf   sum2.hbp-temp-range-pos              servo-thread
-addf   lowpass.hbp-temp-range               servo-thread
 addf   wcomp.hbp-temp-range                 servo-thread
 addf   not.hbp-temp-range                   servo-thread
 addf   wcomp.hbp-temp-limit                 servo-thread
-addf   pid.hbp-temp.do-pid-calcs            servo-thread
 addf   limit1.hbp-heater                    servo-thread
 addf   and3.hbp-no-error                    servo-thread
 addf   not.hbp-error                        servo-thread
@@ -79,7 +77,6 @@ addf   pid.e0-temp.do-pid-calcs             servo-thread
 addf   limit1.e0-heater                     servo-thread
 addf   sum2.e0-temp-range-neg               servo-thread
 addf   sum2.e0-temp-range-pos               servo-thread
-addf   lowpass.e0-temp-range                servo-thread
 addf   wcomp.e0-temp-range                  servo-thread
 addf   not.e0-temp-range                    servo-thread
 addf   wcomp.e0-temp-limit                  servo-thread
@@ -508,12 +505,10 @@ net probe.input  => motion.probe-input
 newsig e0.temp.set               float
 newsig e0.temp.measr             float
 newsig e0.temp.meas              float
-newsig e0.temp.measl             float
 newsig e0.temp.range.pos_error   float
 newsig e0.temp.range.neg_error   float
 newsig e0.temp.range.max         float
 newsig e0.temp.range.min         float
-newsig e0.temp.range.lowpassgain float
 newsig e0.temp.in-range          bit
 newsig e0.temp.pwm               float
 newsig e0.temp.pwm.max           float
@@ -528,6 +523,7 @@ newsig e0.active                 bit
 
 net e0.temp.measr  => lowpass.e0-temp.in
 net e0.temp.meas   <= lowpass.e0-temp.out
+setp lowpass.e0-temp.gain 0.003
 
 # PID
 net emcmot.00.enable  =>   pid.e0-temp.enable
@@ -550,14 +546,9 @@ net e0.temp.range.pos_error  => sum2.e0-temp-range-pos.in1
 net e0.temp.set              => sum2.e0-temp-range-neg.in0
 net e0.temp.range.neg_error  => sum2.e0-temp-range-neg.in1
 
-# the lowpass filters the temperature to make sure it is stable when the wcomp is triggered
-net e0.temp.range.lowpassgain => lowpass.e0-temp-range.gain
-net e0.temp.meas              => lowpass.e0-temp-range.in
-net e0.temp.measl             <= lowpass.e0-temp-range.out
-
 net e0.temp.range.min sum2.e0-temp-range-neg.out => wcomp.e0-temp-range.min
 net e0.temp.range.max sum2.e0-temp-range-pos.out => wcomp.e0-temp-range.max
-net e0.temp.measl                => wcomp.e0-temp-range.in
+net e0.temp.meas                => wcomp.e0-temp-range.in
 #the output of wcomp.e0-temp-range will say if measured temperature is in range of set value
 #this needs to be coupled to a digital input for M66 readout
 net e0.temp.in-range <= wcomp.e0-temp-range.out
@@ -614,7 +605,6 @@ sets e0.pid.bias      [EXTRUDER_0]PID_BIAS
 # Parameters
 sets e0.temp.range.pos_error   [EXTRUDER_0]TEMP_RANGE_POS_ERROR
 sets e0.temp.range.neg_error   [EXTRUDER_0]TEMP_RANGE_NEG_ERROR
-sets e0.temp.range.lowpassgain [EXTRUDER_0]TEMP_RANGE_LOWPASSGAIN
 sets e0.temp.limit.min         [EXTRUDER_0]TEMP_LIMIT_MIN
 sets e0.temp.limit.max         [EXTRUDER_0]TEMP_LIMIT_MAX
 sets e0.temp.standby           [EXTRUDER_0]TEMP_STANDBY
@@ -627,6 +617,7 @@ setp thermistor-check.e0.min-temp 1.5
 # Bed temperature control
 # ----------------------------------------------------------------------------
 newsig hbp.temp.set              float
+newsig hbp.temp.measr            float
 newsig hbp.temp.meas             float
 newsig hbp.temp.range.pos_error  float
 newsig hbp.temp.range.neg_error  float
@@ -643,6 +634,10 @@ newsig hbp.therm-ok              bit
 newsig hbp.no-error              bit
 newsig hbp.error                 bit
 newsig hbp.active                bit
+
+net hbp.temp.measr  => lowpass.hbp-temp.in
+net hbp.temp.meas   <= lowpass.hbp-temp.out
+setp lowpass.hbp-temp.gain 0.003
 
 # PID
 net emcmot.00.enable => pid.hbp-temp.enable
@@ -975,7 +970,7 @@ setp i2c-gpio.B.in-07.pullup 0
 # ##################################################
 # ADC
 # ##################################################
-net hbp.temp.meas        <= i2c-temp.ch-00.value
+net hbp.temp.measr       <= i2c-temp.ch-00.value
 net e0.temp.measr        <= i2c-temp.ch-01.value
 #net e1.temp.meas        <= i2c-temp.ch-02.value
 #net e2.temp.meas        <= i2c-temp.ch-03.value
