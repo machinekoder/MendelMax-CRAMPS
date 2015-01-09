@@ -38,13 +38,13 @@ loadrt charge_pump
 loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hbp
 loadrt not names=not.e0-temp-range,not.hbp-temp-range,not.e0-error,not.hbp-error
 loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,wcomp.hbp-temp-limit
-loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range
+loadrt lowpass names=lowpass.e0-temp-range,lowpass.hbp-temp-range,lowpass.e0-temp,lowpass.hbp-temp
 loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
 loadrt and2 names=and2.probe
 loadrt mux2 names=mux2.exp0-pwm
 #loadrt in2io names=in2io.e0-temp-set,in2io.hbp-temp-set,in2io.f0-set,in2io.f1-set,in2io.f2-set,in2io.f3-set,in2io.l0-r,in2io.l0-g,in2io.l0-b,in2io.l0-w,in2io.probe-offset-x,in2io.probe-offset-y,in2io.probe-offset-z,in2io.p0-x,in2io.p0-y,in2io.p1-x,in2io.p1-y,in2io.p2-x,in2io.p2-y,in2io.p3-x,in2io.p3-y
 loadrt in2io personality=51 names=in2io-motion
-loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103 # and 8 and 3 inputs
+loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103,0x103 # and 8 and 3 inputs
 loadrt comp names=comp.exp0-temp,comp.hbp-hot,comp.e0-active,comp.hbp-active
 loadrt select8 names=select8.extruder
 loadrt watchdog num_inputs=3
@@ -61,6 +61,7 @@ addf   and2.probe                           servo-thread
 addf   motion-controller                    servo-thread
 addf   in2io-motion                         servo-thread
 # HBP
+addf   lowpass.hbp-temp                     servo-thread
 addf   sum2.hbp-temp-range-neg              servo-thread
 addf   sum2.hbp-temp-range-pos              servo-thread
 addf   lowpass.hbp-temp-range               servo-thread
@@ -73,6 +74,7 @@ addf   and3.hbp-no-error                    servo-thread
 addf   not.hbp-error                        servo-thread
 addf   comp.hbp-active                      servo-thread
 # E0
+addf   lowpass.e0-temp                      servo-thread
 addf   pid.e0-temp.do-pid-calcs             servo-thread
 addf   limit1.e0-heater                     servo-thread
 addf   sum2.e0-temp-range-neg               servo-thread
@@ -134,7 +136,7 @@ loadusr -Wn i2c-gpio ./python/Gpio.py --name i2c-gpio --bus_id 2 --address 32 --
 loadusr -Wn i2c-pwm ./python/Pwm.py --name i2c-pwm --bus_id 2 --address 67 --interval 0.1 --delay 2.6
 
 # Python user-mode HAL module to interface with an I2C ADC and convert it to temperature
-loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 10 --channels 00:[HBP]THERMISTOR,01:[EXTRUDER_0]THERMISTOR,02:semitec_103GT_2,03:semitec_103GT_2,04:semitec_103GT_2,05:none,06:none,07:none
+loadusr -Wn i2c-temp ./python/Temperature.py --name i2c-temp --bus_id 2 --address 72 --interval 0.05 --delay 2.7 --filter_size 1 --channels 00:[HBP]THERMISTOR,01:[EXTRUDER_0]THERMISTOR,02:semitec_103GT_2,03:semitec_103GT_2,04:semitec_103GT_2,05:none,06:none,07:none
 
 # Python user-mode HAL module for storing values
 loadusr -Wn storage ./python/Storage.py -n storage -f storage.ini -a
@@ -504,6 +506,7 @@ net probe.input  => motion.probe-input
 # Extruder 0 temperature control
 # --------------------------------------------------------------------------
 newsig e0.temp.set               float
+newsig e0.temp.measr             float
 newsig e0.temp.meas              float
 newsig e0.temp.measl             float
 newsig e0.temp.range.pos_error   float
@@ -522,6 +525,9 @@ newsig e0.therm-ok               bit
 newsig e0.no-error               bit
 newsig e0.error                  bit
 newsig e0.active                 bit
+
+net e0.temp.measr  => lowpass.e0-temp.in
+net e0.temp.meas   <= lowpass.e0-temp.out
 
 # PID
 net emcmot.00.enable  =>   pid.e0-temp.enable
@@ -584,11 +590,11 @@ net e0.heaterl => comp.e0-active.in1
 net e0.active  <= comp.e0-active.out
 
 # PID control linking
-net pid-Pgain       fdm-e0-pid.Pgain     <=> pid.e0-temp.Pgain
-net pid-Igain       fdm-e0-pid.Igain     <=> pid.e0-temp.Igain
-net pid-Dgain       fdm-e0-pid.Dgain     <=> pid.e0-temp.Dgain
-net pid-maxerrorI   fdm-e0-pid.maxerrorI <=> pid.e0-temp.maxerrorI
-net pid-bias        fdm-e0-pid.bias      <=> pid.e0-temp.bias
+net e0.pid.Pgain       fdm-e0-pid.Pgain     <=> pid.e0-temp.Pgain
+net e0.pid.Igain       fdm-e0-pid.Igain     <=> pid.e0-temp.Igain
+net e0.pid.Dgain       fdm-e0-pid.Dgain     <=> pid.e0-temp.Dgain
+net e0.pid.maxerrorI   fdm-e0-pid.maxerrorI <=> pid.e0-temp.maxerrorI
+net e0.pid.bias        fdm-e0-pid.bias      <=> pid.e0-temp.bias
 net e0.temp.limit.min  => fdm-e0-pid.min
 net e0.temp.limit.max  => fdm-e0-pid.max
 net e0.temp.set       <=> fdm-e0-pid.command
@@ -599,11 +605,11 @@ net e0.heater          => fdm-e0-pid.output
 #setp pid.e0-temp.FF0      0
 #setp pid.e0-temp.FF1      0
 #setp pid.e0-temp.FF2      0
-setp pid.e0-temp.Pgain     [EXTRUDER_0]PID_PGAIN
-setp pid.e0-temp.Igain     [EXTRUDER_0]PID_IGAIN
-setp pid.e0-temp.Dgain     [EXTRUDER_0]PID_DGAIN
-setp pid.e0-temp.maxerrorI [EXTRUDER_0]PID_MAXERRORI
-setp pid.e0-temp.bias      [EXTRUDER_0]PID_BIAS
+sets e0.pid.Pgain     [EXTRUDER_0]PID_PGAIN
+sets e0.pid.Igain     [EXTRUDER_0]PID_IGAIN
+sets e0.pid.Dgain     [EXTRUDER_0]PID_DGAIN
+sets e0.pid.maxerrorI [EXTRUDER_0]PID_MAXERRORI
+sets e0.pid.bias      [EXTRUDER_0]PID_BIAS
 
 # Parameters
 sets e0.temp.range.pos_error   [EXTRUDER_0]TEMP_RANGE_POS_ERROR
@@ -970,7 +976,7 @@ setp i2c-gpio.B.in-07.pullup 0
 # ADC
 # ##################################################
 net hbp.temp.meas        <= i2c-temp.ch-00.value
-net e0.temp.meas         <= i2c-temp.ch-01.value
+net e0.temp.measr        <= i2c-temp.ch-01.value
 #net e1.temp.meas        <= i2c-temp.ch-02.value
 #net e2.temp.meas        <= i2c-temp.ch-03.value
 #net e3.temp.meas        <= i2c-temp.ch-04.value
