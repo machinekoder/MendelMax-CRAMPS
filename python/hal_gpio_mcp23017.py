@@ -6,7 +6,7 @@ Gpio.py
 Created by Alexander Rössler on 2014-03-24.
 """
 
-from MCP23017 import MCP23017
+from drivers.MCP23017 import MCP23017
 
 import argparse
 import time

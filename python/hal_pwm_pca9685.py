@@ -6,7 +6,7 @@ Pwm.py
 Created by Alexander Rössler on 2014-03-24.
 """
 
-from PCA9685 import PCA9685
+from drivers.PCA9685 import PCA9685
 
 import argparse
 import time

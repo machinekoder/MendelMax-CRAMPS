@@ -6,8 +6,8 @@ Temperature.py
 Created by Alexander Rössler on 2014-03-24.
 """
 
-from ADS7828 import ADS7828
-from R2Temp import R2Temp
+from drivers.ADS7828 import ADS7828
+from fdm.r2temp import R2Temp
 
 import argparse
 import time

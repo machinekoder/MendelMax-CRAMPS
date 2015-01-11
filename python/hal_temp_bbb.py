@@ -51,7 +51,7 @@ import sys
 import time
 
 import hal
-from R2Temp import R2Temp
+from fdm.r2temp import R2Temp
 
 
 # The BeBoPr board thermistor input has one side grounded and the other side
