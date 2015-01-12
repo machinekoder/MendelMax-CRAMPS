@@ -23,7 +23,7 @@ loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_ai
 #loadrt threads name1=run-thread period1=50170000
 
 # Gantry component for Z Axis
-loadrt gantry names=gantry.z personality=2
+loadrt gantry_latching names=gantry.z personality=2
 
 # load low-level drivers
 loadrt hal_bb_gpio output_pins=807,819,826,926 input_pins=941
