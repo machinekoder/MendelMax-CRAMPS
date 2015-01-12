@@ -32,7 +32,7 @@ loadrt [PRUCONF](DRIVER) prucode=[PRUCONF](PRUBIN) [PRUCONF](CONFIG) halname=hpg
 # other components
 loadrt pid names=pid.e0-temp,pid.hbp-temp
 loadrt limit1 names=limit1.e0-heater,limit1.hbp-heater
-loadrt scale names=scale.f0,scale.f1,scale.f2,scale.f3
+loadrt scale names=scale.f0,scale.f1,scale.f2,scale.f3,scale.e0-fan-comp
 loadrt led_dim names=led-dim.l0-r,led-dim.l0-g,led-dim.l0-b,led-dim.l0-w
 loadrt charge_pump
 loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hbp
@@ -72,6 +72,7 @@ addf   and3.hbp-no-error                    servo-thread
 addf   not.hbp-error                        servo-thread
 addf   comp.hbp-active                      servo-thread
 # E0
+addf   scale.e0-fan-comp                    servo-thread
 addf   lowpass.e0-temp                      servo-thread
 addf   pid.e0-temp.do-pid-calcs             servo-thread
 addf   limit1.e0-heater                     servo-thread
@@ -537,7 +538,7 @@ net e0.heaterl     <= limit1.e0-heater.out
 # Limit heater PWM to positive values
 # PWM mimics hm2 implementation, which generates output for negative values
 setp limit1.e0-heater.min 0.0
-setp limit1.e0-heater.max [EXTRUDER_0]PWM_MAX
+setp limit1.e0-heater.max 1.0
 net e0.temp.pwm.max => pid.e0-temp.maxoutput
 sets e0.temp.pwm.max [EXTRUDER_0]PWM_MAX
 
@@ -613,6 +614,11 @@ sets e0.temp.standby           [EXTRUDER_0]TEMP_STANDBY
 setp thermistor-check.e0.wait 9.0
 setp thermistor-check.e0.min-pid 0.25
 setp thermistor-check.e0.min-temp 1.5
+
+# Fan compensation
+net f0.pwm => scale.e0-fan-comp.in
+net e0.pid.bias <= scale.e0-fan-comp.out
+setp scale.e0-fan-comp.gain 0.25
 
 
 # Bed temperature control
