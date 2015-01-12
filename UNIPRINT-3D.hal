@@ -149,9 +149,10 @@ net temp-watchdog <= i2c-temp.watchdog
 # ###################################
 # UI remote component definition
 # ###################################
+sete 1 0.1
 
 newcomp fdm-e0 timer=100
-newpin  fdm-e0 fdm-e0.temp.meas      float in
+newpin  fdm-e0 fdm-e0.temp.meas      float in eps=1
 newpin  fdm-e0 fdm-e0.temp.set       float io
 newpin  fdm-e0 fdm-e0.temp.standby   float in
 newpin  fdm-e0 fdm-e0.temp.limit.min float in
@@ -162,7 +163,7 @@ newpin  fdm-e0 fdm-e0.active         bit   in
 ready   fdm-e0
 
 newcomp fdm-hbp timer=100
-newpin  fdm-hbp fdm-hbp.temp.meas      float in
+newpin  fdm-hbp fdm-hbp.temp.meas      float in eps=1
 newpin  fdm-hbp fdm-hbp.temp.set       float io
 newpin  fdm-hbp fdm-hbp.temp.standby   float in
 newpin  fdm-hbp fdm-hbp.temp.limit.min float in
