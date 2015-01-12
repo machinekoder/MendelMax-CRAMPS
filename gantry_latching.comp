@@ -1,6 +1,7 @@
 /******************************************************************************
  *
  * Copyright (C) 2014 Charles Steinkuehler (charles AT steinkuehler DOT net)
+ * Modified 2015 by Alexander Roessler (mail AT roessler DOT systems)
  *
  *
  * This module allows multiple drive motors (joints) to be connected to a
@@ -46,7 +47,7 @@ pin in  float joint.##.home-offset [7: personality] "Per-joint home offset for f
 pin out float joint.##.offset  [7 : personality] "(debugging) Per-joint offset value, updated when homing";
 pin in  float position-cmd "Commanded position from motion";
 pin out float position-fb "Position feedback to motion";
-pin in  bit   homing "Homing state from motion";
+pin in  bit   homing "Axis homing state from motion";
 pin out bit   home "Combined home signal, true if all joint home inputs are true";
 pin out bit   limit "Combined limit signal, true if any joint home input is true";
 pin in  float search-vel "HOME_SEARCH_VEL from ini file";
@@ -59,18 +60,27 @@ The `personality' value is the number of joints to control.  Two is typical, but
 up to seven is supported (a three joint setup has been tested with hardware).
 .LP
 All controlled joints track the commanded position (with a per-joint offset)
-unless in the process of homing.  Homing is when the commanded position is
-moving towards the homing switches (as determined by the sign of search-vel)
-and the joint home switches are not all in the same state.  When the system is
-homing and a joint home switch activates, the command value sent to that joint
+unless in the process of latching.  Latching is when the commanded position is
+moving away the from the homing switches (as determined by the sign of search-vel),
+the joint home switches are not all in the same state and homing is active.  When the system is
+latching and a joint home switch deactivates, the command value sent to that joint
 is "frozen" and the joint offset value is updated instead.  Once all home
-switches are active, there are no more adjustments made to the offset values
+switches are deactivated, there are no more adjustments made to the offset values
 and all joints run in lock-step once more.
 .LP
-For best results, set HOME_SEARCH_VEL and HOME_LATCH_VEL to the same direction
+For best results, set HOME_SEARCH_VEL and HOME_LATCH_VEL to the opposite direction
 and as slow as practical.  When a joint home switch trips, the commanded
 velocity will drop immediately from HOME_SEARCH_VEL to zero, with no limit on
 accleration.
+.LP
+The latching gantry component is the opposite of the normal gantry component. It
+makes sense to use it with home switches that have a reproduceable deactivation hysteresis.
+.LP
+Using the per joint home-offset input it is possible add a small offset when latching.
+This makes it possible to adjust small differences in the endstop positions of the gantry setup.
+.LP
+The homing input must be connected to the axis homing output motion in order to enable
+the gantry component. When the axis is not homing latching will not be activated.
 """;
 license "GPL";
 variable float offset[7] = 0.0;
