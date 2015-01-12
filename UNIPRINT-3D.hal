@@ -587,7 +587,7 @@ net e0.pid.Pgain       fdm-e0-pid.Pgain     <=> pid.e0-temp.Pgain
 net e0.pid.Igain       fdm-e0-pid.Igain     <=> pid.e0-temp.Igain
 net e0.pid.Dgain       fdm-e0-pid.Dgain     <=> pid.e0-temp.Dgain
 net e0.pid.maxerrorI   fdm-e0-pid.maxerrorI <=> pid.e0-temp.maxerrorI
-net e0.pid.bias        fdm-e0-pid.bias      <=> pid.e0-temp.bias
+#net e0.pid.bias        fdm-e0-pid.bias      <=> pid.e0-temp.bias
 net e0.temp.limit.min  => fdm-e0-pid.min
 net e0.temp.limit.max  => fdm-e0-pid.max
 net e0.temp.set       <=> fdm-e0-pid.command
@@ -602,7 +602,7 @@ sets e0.pid.Pgain     [EXTRUDER_0]PID_PGAIN
 sets e0.pid.Igain     [EXTRUDER_0]PID_IGAIN
 sets e0.pid.Dgain     [EXTRUDER_0]PID_DGAIN
 sets e0.pid.maxerrorI [EXTRUDER_0]PID_MAXERRORI
-sets e0.pid.bias      [EXTRUDER_0]PID_BIAS
+#sets e0.pid.bias      [EXTRUDER_0]PID_BIAS
 
 # Parameters
 sets e0.temp.range.pos_error   [EXTRUDER_0]TEMP_RANGE_POS_ERROR
@@ -617,8 +617,8 @@ setp thermistor-check.e0.min-temp 1.5
 
 # Fan compensation
 net f0.pwm => scale.e0-fan-comp.in
-net e0.pid.bias <= scale.e0-fan-comp.out
-setp scale.e0-fan-comp.gain 0.25
+net e0.pid.bias pid.e0-temp.bias <= scale.e0-fan-comp.out
+setp scale.e0-fan-comp.gain 0.56
 
 
 # Bed temperature control
@@ -793,7 +793,7 @@ net l0.hbp-hot <= comp.hbp-hot.out
 # F0
 # ---------------------------
 newsig f0.set           float
-newsig f0.pwm           float
+#newsig f0.pwm           float
 # ---------------------------
 setp scale.f0.gain 0.00392156862745
 net f0.set => scale.f0.in
