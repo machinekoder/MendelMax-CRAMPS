@@ -1,7 +1,7 @@
 o<m300> sub
 #500=39; buzzer frequency index
 #501=40; buzzer duration index
-#502=41; buzzer trigger index
+#502=2; buzzer trigger index
 #503=0; not synchronized
 o100 if [EXISTS[#<i>]]
     o110 if [#<i> EQ 1]

@@ -126,7 +126,7 @@ newsig pwm-watchdog bit
 newsig temp-watchdog bit
 
 # Python user-mode HAL module to interface with an I2C gpio extender
-loadusr -Wn i2c-gpio hal_gpio_mcp23017 --name i2c-gpio --bus_id 2 --address 32 --interval 0.05 --delay 2.5 --input_pins A00,A01,A02,A03,A04,A05,A06,A07,B06,B07 --output_pins B00,B01,B02,B03,B04,B05
+loadusr -Wn i2c-gpio hal_gpio_mcp23017 --name i2c-gpio --bubbbbs_id 2 --address 32 --interval 0.05 --delay 2.5 --input_pins A00,A01,A02,A03,A04,A05,A06,A07,B06,B07 --output_pins B00,B01,B02,B03,B04,B05
 
 # Python user-mode HAL module to interface with an I2C PWM generator
 loadusr -Wn i2c-pwm hal_pwm_pca9685 --name i2c-pwm --bus_id 2 --address 67 --interval 0.1 --delay 2.6
@@ -1001,7 +1001,8 @@ net l0.b                 <= motion.analog-out-io-28
 net l0.w                 <= motion.analog-out-io-29
 net probe.sel-f          <= motion.analog-out-38
 
-net probe.enable         <= motion.digital-out-38
+net probe.enable         <= motion.digital-out-00
+net extruder-enable      <= motion.digital-out-01
 
 net hbp.temp.meas        => motion.analog-in-00
 #net hbc.temp.meas        => motion.analog-in-01
