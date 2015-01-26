@@ -42,7 +42,6 @@ loadrt lowpass names=lowpass.e0-temp,lowpass.hbp-temp
 loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
 loadrt and2 names=and2.probe
 loadrt mux2 names=mux2.exp0-pwm
-loadrt in2io personality=40 names=in2io-motion
 loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103,0x103 # and 8 and 3 inputs
 loadrt comp names=comp.exp0-temp,comp.hbp-hot,comp.e0-active,comp.hbp-active
 loadrt select8 names=select8.extruder
@@ -58,7 +57,6 @@ addf   f2u.probe-sel                        servo-thread
 addf   mux-gen.00                           servo-thread
 addf   and2.probe                           servo-thread
 addf   motion-controller                    servo-thread
-addf   in2io-motion                         servo-thread
 # HBP
 addf   lowpass.hbp-temp                     servo-thread
 addf   pid.hbp-temp.do-pid-calcs            servo-thread
@@ -990,30 +988,19 @@ net e0.temp.measr        <= i2c-temp.ch-01.value
 # Motion AIO and DIO
 # ##################################################
 
-net hbp.temp.set-program <= motion.analog-out-00
-#net hbc.temp.set-program <= motion.analog-out-01
-net e0.temp.set-program  <= motion.analog-out-02
-net f0.set-program       <= motion.analog-out-12
-net f1.set-program       <= motion.analog-out-13
-net f2.set-program       <= motion.analog-out-14
-net f3.set-program       <= motion.analog-out-15
-net l0.r-program         <= motion.analog-out-26
-net l0.g-program         <= motion.analog-out-27
-net l0.b-program         <= motion.analog-out-28
-net l0.w-program         <= motion.analog-out-29
+net hbp.temp.set         <= motion.analog-out-io-00
+#net hbc.temp.set         <= motion.analog-out-io-01
+net e0.temp.set          <= motion.analog-out-io-02
+net f0.set               <= motion.analog-out-io-12
+net f1.set               <= motion.analog-out-io-13
+net f2.set               <= motion.analog-out-io-14
+net f3.set               <= motion.analog-out-io-15
+net l0.r                 <= motion.analog-out-io-26
+net l0.g                 <= motion.analog-out-io-27
+net l0.b                 <= motion.analog-out-io-28
+net l0.w                 <= motion.analog-out-io-29
 net probe.sel-f          <= motion.analog-out-38
 
-net hbp.temp.set-trigger <= motion.digital-out-00
-#net hbc.temp.set-trigger <= motion.digital-out-01
-net e0.temp.set-trigger  <= motion.digital-out-02
-net f0.set-trigger       <= motion.digital-out-12
-net f1.set-trigger       <= motion.digital-out-13
-net f2.set-trigger       <= motion.digital-out-14
-net f3.set-trigger       <= motion.digital-out-15
-net l0.r-trigger         <= motion.digital-out-26
-net l0.g-trigger         <= motion.digital-out-27
-net l0.b-trigger         <= motion.digital-out-28
-net l0.w-trigger         <= motion.digital-out-29
 net probe.enable         <= motion.digital-out-38
 
 net hbp.temp.meas        => motion.analog-in-00
@@ -1031,40 +1018,6 @@ net l0.w                 => motion.analog-in-29
 net hbp.temp.in-range   => motion.digital-in-00
 #net hbc.temp.in-range   => motion.digital-in-01
 net e0.temp.in-range    => motion.digital-in-02
-
-net hbp.temp.set-program => in2io-motion.in.00
-net hbp.temp.set-trigger => in2io-motion.trigger.00
-net hbp.temp.set         <= in2io-motion.io.00
-#net hbc.temp.set-program => in2io-motion.in.01
-#net hbc.temp.set-trigger => in2io-motion.trigger.01
-#net hbc.temp.set         <= in2io-motion.io.01
-net e0.temp.set-program => in2io-motion.in.02
-net e0.temp.set-trigger => in2io-motion.trigger.02
-net e0.temp.set         <= in2io-motion.io.02
-net f0.set-program      => in2io-motion.in.12
-net f0.set-trigger      => in2io-motion.trigger.12
-net f0.set              <= in2io-motion.io.12
-net f1.set-program      => in2io-motion.in.13
-net f1.set-trigger      => in2io-motion.trigger.13
-net f1.set              <= in2io-motion.io.13
-net f2.set-program      => in2io-motion.in.14
-net f2.set-trigger      => in2io-motion.trigger.14
-net f2.set              <= in2io-motion.io.14
-net f3.set-program      => in2io-motion.in.15
-net f3.set-trigger      => in2io-motion.trigger.15
-net f3.set              <= in2io-motion.io.15
-net l0.r-program        => in2io-motion.in.26
-net l0.r-trigger        => in2io-motion.trigger.26
-net l0.r                <= in2io-motion.io.26
-net l0.g-program        => in2io-motion.in.27
-net l0.g-trigger        => in2io-motion.trigger.27
-net l0.g                <= in2io-motion.io.27
-net l0.b-program        => in2io-motion.in.28
-net l0.b-trigger        => in2io-motion.trigger.28
-net l0.b                <= in2io-motion.io.28
-net l0.w-program        => in2io-motion.in.29
-net l0.w-trigger        => in2io-motion.trigger.29
-net l0.w                <= in2io-motion.io.29
 
 # ##################################################
 # Estop chain, watchdog and charge-pump
