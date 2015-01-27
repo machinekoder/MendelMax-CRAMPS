@@ -41,6 +41,7 @@ pin in  float   temp      "Temperature input";
 pin in  float   min_temp  "The minimum temperature change that should count";
 pin in  float   pid       "Output of PID control";
 pin in  float   min_pid   "The minimum PID control output to react to";
+pin in  float   bias      "Bias for the PID input. Can be used to correct errors due to cooling.";
 pin in  float   wait      "Time to wait before triggering an error in secods";
 pin in  bit     enable    "Enables or disables the component, out is TRUE when disabled";
 pin out bit     no_error  "Output value -> TRUE when the thermistor works as exspected";
@@ -82,7 +83,7 @@ FUNCTION(_) {
         }
     }
 
-    if ((enable) && (pid >= min_pid))
+    if ((enable) && (pid >= (min_pid+bias)))
     {
         if (start == 1)
         {
