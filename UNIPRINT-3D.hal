@@ -17,7 +17,7 @@ loadusr -W haltalk
 loadrt trivkins
 
 # motion controller, get name and thread periods from ini file
-loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=56 num_dio=56 #[TRAJ]AXES
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=4 num_aio=56 num_dio=56 #[TRAJ]AXES
 
 # THREADS
 #loadrt threads name1=run-thread period1=50170000
