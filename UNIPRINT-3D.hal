@@ -39,7 +39,7 @@ loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hbp
 loadrt not names=not.e0-temp-range,not.hbp-temp-range,not.e0-error,not.hbp-error
 loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,wcomp.hbp-temp-limit
 loadrt lowpass names=lowpass.e0-temp,lowpass.hbp-temp
-loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos
+loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos,sum2.extruder-vel-adj
 loadrt and2 names=and2.probe
 loadrt mux2 names=mux2.exp0-pwm
 loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103,0x103 # and 8 and 3 inputs
@@ -48,6 +48,13 @@ loadrt select8 names=select8.extruder
 loadrt watchdog num_inputs=3
 loadrt mux_generic config=bb4 # mux-gen.00 for probe
 loadrt conv_float_u32 names=f2u.probe-sel
+
+loadrt hypot names=hypot.nozzle-vel
+loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-area,mult2.filament-dia,mult2.extrude-rate,mult2.retract-time,mult2.extruder-vel-adj
+loadrt invert names=invert.filament-area,invert.retract-time
+loadrt mux4 names=mux4.ve
+loadrt oneshot names=oneshot.feed-hold,oneshot.retract
+loadrt ddt names=ddt.extruder-accel
 
 addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
@@ -107,6 +114,22 @@ addf   thermistor-check.hbp                 servo-thread
 addf   watchdog.set-timeouts                servo-thread
 addf   watchdog.process                     servo-thread
 addf   estopchain                           servo-thread
+
+# velocity extruding
+addf hypot.nozzle-vel                       servo-thread
+addf mult2.nozzle-discharge                 servo-thread
+addf mult2.filament-area                    servo-thread
+addf mult2.filament-dia                     servo-thread
+addf invert.filament-area                   servo-thread
+addf mult2.extrude-rate                     servo-thread
+addf mux4.ve                                servo-thread
+addf invert.retract-time                    servo-thread
+addf mult2.retract-time                     servo-thread
+addf oneshot.feed-hold                      servo-thread
+addf oneshot.retract                        servo-thread
+addf ddt.extruder-accel                     servo-thread
+addf sum2.extruder-vel-adj                  servo-thread
+addf mult2.extruder-vel-adj                 servo-thread
 
 # Update functions
 addf   gantry.z.write                       servo-thread
@@ -366,22 +389,104 @@ setp hpg.stepgen.03.dirpin          [AXIS_2]DIRPIN_LEFT
 # ################
 # A [4] Axis (Extruder) - Velocity control
 # ################
+net extruder-enable <= motion.digital-out-1
+net line-area <= motion.analog-out-41
+
+# take all the actual speeds from the axes and calculate resulting speed.
+net xvel axis.0.joint-vel-cmd => hypot.nozzle-vel.in0
+net yvel axis.1.joint-vel-cmd => hypot.nozzle-vel.in1
+net zvel axis.2.joint-vel-cmd => hypot.nozzle-vel.in2
+net nozzle-vel <= hypot.nozzle-vel.out
+
+# multiply area with speed and we get discharge (mm^3 per second)
+net line-area => mult2.nozzle-discharge.in0
+net nozzle-vel => mult2.nozzle-discharge.in1
+net nozzle-discharge <= mult2.nozzle-discharge.out
+
+# calculate filament cross section area
+# PI divided by 4
+setp mult2.filament-area.in0 0.78539816339
+setp mult2.filament-dia.in0 [EXTRUDER_0]FILAMENT_DIA
+setp mult2.filament-dia.in1 [EXTRUDER_0]FILAMENT_DIA
+net diameter-squared mult2.filament-dia.out => mult2.filament-area.in1
+net filament-area mult2.filament-area.out => invert.filament-area.in
+net divide-by-filament-area <= invert.filament-area.out
+
+# calculate extrude rate
+net nozzle-discharge => mult2.extrude-rate.in0
+net divide-by-filament-area => mult2.extrude-rate.in1
+net extrude-rate <= mult2.extrude-rate.out
+
+# now the solution of Andy Pugh for automatically retracting/priming
+#00 = motion without extrusion
+#01 = retract
+#10 = motion with extrusion
+#11 = pre-charge
+setp mux4.ve.in0 0
+setp mux4.ve.in1 -[EXTRUDER_0]RETRACT_VEL
+net extrude-rate => mux4.ve.in2
+setp mux4.ve.in3 [EXTRUDER_0]RETRACT_VEL
+net extruder-vel <= mux4.ve.out
+
+# calculate retract time
+setp invert.retract-time.in [EXTRUDER_0]RETRACT_VEL
+net divide-by-retract-vel <= invert.retract-time.out
+setp mult2.retract-time.in0 [EXTRUDER_0]RETRACT_LENGTH
+net divide-by-retract-vel => mult2.retract-time.in1
+net retract-time <= mult2.retract-time.out
+
+# We want the retract-charge to run for a fixed time:
+# when sel0 set to "1" meaning motion with extrusion" the on the rising edge
+# there will temporarily be also sel1 which is high, meaning a pre-charge because the
+# sel combination is 11
+# when sel1 set to "0" meaning decoupling motion with extrusion" then the falling edge
+# will trigger a 01 combination, meaning a retract
+net extruder-enable => oneshot.feed-hold.in oneshot.retract.in mux4.ve.sel1
+net feed-hold oneshot.feed-hold.out => motion.feed-hold
+net retract oneshot.retract.out => mux4.ve.sel0
+# trigger a retract/unretract move when extruder is enable or disabled
+setp oneshot.retract.rising 1
+setp oneshot.retract.falling 1
+setp oneshot.retract.retriggerable 1
+# wait unretract to finish before continuing move
+setp oneshot.feed-hold.rising 1
+setp oneshot.feed-hold.falling 0
+setp oneshot.feed-hold.retriggerable 1
+#setp oneshot.0.width 0.0
+#by setting the width, the automatic retract/precharge can be disabled
+net retract-time => oneshot.retract.width oneshot.feed-hold.width
+
+# these are used for a small offset in velocity during acceleration (buildup pressure inside
+# the nozzle because of the current speed. Take the maximum accel you've specified in .ini
+# get acceleration into lincurve
+net extruder-vel => ddt.extruder-accel.in
+net extruder-accel <= ddt.extruder-accel.out
+net extruder-accel => mult2.extruder-vel-adj.in0
+net extruder-vel-adj-gain => mult2.extruder-vel-adj.in1
+net vel-adjustment <= mult2.extruder-vel-adj.out
+sets extruder-vel-adj-gain 7.0
+# get adjusted speed for adding to current speed during accelleration
+net extruder-vel => sum2.extruder-vel-adj.in0
+net vel-adjustment => sum2.extruder-vel-adj.in1
+net extruder-vel-adjusted <= sum2.extruder-vel-adj.out
 
 # axis enable chain
-newsig emcmot.03.enable bit
-sets emcmot.03.enable FALSE
+#newsig emcmot.03.enable bit
+#sets emcmot.03.enable FALSE
 
-net emcmot.03.enable <= axis.3.amp-enable-out 
-net emcmot.03.enable => hpg.stepgen.04.enable
+#net emcmot.03.enable <= axis.3.amp-enable-out
+#net emcmot.03.enable => hpg.stepgen.04.enable
 
 # position command and feedback
-net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
-net emcmot.03.pos-cmd => hpg.stepgen.04.position-cmd
+#net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
+#net emcmot.03.pos-cmd => hpg.stepgen.04.position-cmd
 
-net motor.04.pos-fb <= hpg.stepgen.04.position-fb
-net motor.04.pos-fb => axis.3.motor-pos-fb
+#net motor.04.pos-fb <= hpg.stepgen.04.position-fb
+#net motor.04.pos-fb => axis.3.motor-pos-fb
 
 # timing parameters
+setp hpg.stepgen.04.control-type    1
+
 setp hpg.stepgen.04.dirsetup        [AXIS_3]DIRSETUP
 setp hpg.stepgen.04.dirhold         [AXIS_3]DIRHOLD
 
