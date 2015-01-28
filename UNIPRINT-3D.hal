@@ -17,7 +17,7 @@ loadusr -W haltalk
 loadrt trivkins
 
 # motion controller, get name and thread periods from ini file
-loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=4 num_aio=56 num_dio=56 #[TRAJ]AXES
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=5 num_aio=50 num_dio=20 #[TRAJ]AXES
 
 # THREADS
 #loadrt threads name1=run-thread period1=50170000
@@ -389,7 +389,7 @@ setp hpg.stepgen.03.dirpin          [AXIS_2]DIRPIN_LEFT
 # ################
 # A [4] Axis (Extruder) - Velocity control
 # ################
-net extruder-enable <= motion.digital-out-1
+net extruder-enable <= motion.digital-out-01
 net line-area <= motion.analog-out-41
 
 # take all the actual speeds from the axes and calculate resulting speed.
@@ -470,12 +470,14 @@ net extruder-vel => sum2.extruder-vel-adj.in0
 net vel-adjustment => sum2.extruder-vel-adj.in1
 net extruder-vel-adjusted <= sum2.extruder-vel-adj.out
 
+net extruder-vel-adjusted => hpg.stepgen.04.velocity-cmd
+
 # axis enable chain
 #newsig emcmot.03.enable bit
 #sets emcmot.03.enable FALSE
 
-#net emcmot.03.enable <= axis.3.amp-enable-out
-#net emcmot.03.enable => hpg.stepgen.04.enable
+net emcmot.03.enable <= axis.3.amp-enable-out
+net emcmot.03.enable => hpg.stepgen.04.enable
 
 # position command and feedback
 #net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
@@ -721,7 +723,7 @@ setp scale.e0-fan-comp.gain [EXTRUDER_0]FAN_BIAS
 
 # Thermistor checking
 setp thermistor-check.e0.wait 9.0
-setp thermistor-check.e0.min-pid 0.25
+setp thermistor-check.e0.min-pid 1.5 # disable0.25
 setp thermistor-check.e0.min-temp 1.5
 net e0.pid.bias => thermistor-check.e0.bias
 

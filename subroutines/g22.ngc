@@ -1,5 +1,5 @@
 o<g22> sub
-o101 if 0
+o101 if [0]
 #500=#<_a>
 o100 if [#<_selected_tool> EQ  0]
     #501=#<_ini[EXTRUDER_0]RETRACT_LENGTH>
@@ -36,6 +36,6 @@ G1 A[#500+#501] F#502
 G92 A#500
 o101 else
     #502=1 ; extruder enable index
-    M62 P#502
+    M65 P#502
 o101 endif  
 o<g22> end sub
