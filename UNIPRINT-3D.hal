@@ -56,6 +56,7 @@ loadrt mux4 names=mux4.ve
 loadrt oneshot names=oneshot.feed-hold,oneshot.retract,oneshot.ve-jog
 loadrt ddt names=ddt.extruder-accel
 loadrt or2 names=or2.ve-jog-enable
+loadrt abs names=abs.ve-jog-time
 
 addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
@@ -125,6 +126,7 @@ addf invert.filament-area                   servo-thread
 addf mult2.extrude-rate                     servo-thread
 addf invert.ve-jog-time                     servo-thread
 addf mult2.ve-jog-time                      servo-thread
+addf abs.ve-jog-time                        servo-thread
 addf oneshot.ve-jog                         servo-thread
 addf or2.ve-jog-enable                      servo-thread
 addf mux2.ve-base-vel                       servo-thread
@@ -404,8 +406,6 @@ setp hpg.stepgen.03.dirpin          [AXIS_2]DIRPIN_LEFT
 # ################
 # A [4] Axis (Extruder) - Velocity control
 # ################
-net ve.extruder-enable <= motion.digital-out-01
-net ve.line-area <= motion.analog-out-41
 
 # take all the actual speeds from the axes and calculate resulting speed.
 net ve.xvel axis.0.joint-vel-cmd => hypot.nozzle-vel.in0
@@ -437,7 +437,9 @@ net ve.jog-velocity      => invert.ve-jog-time.in
 net ve.divide-by-jog-vel <= invert.ve-jog-time.out
 net ve.jog-distance      => mult2.ve-jog-time.in0
 net ve.divide-by-jog-vel => mult2.ve-jog-time.in1
-net ve.jog-time          <= mult2.ve-jog-time.out
+net ve.jog-time-signed   <= mult2.ve-jog-time.out
+net ve.jog-time-signed   => abs.ve-jog-time.in
+net ve.jog-time          <= abs.ve-jog-time.out
 
 net ve.jog-trigger => oneshot.ve-jog.in
 net ve.jog-time    => oneshot.ve-jog.width
@@ -516,10 +518,10 @@ net ve.extruder-vel-adjusted <= sum2.extruder-vel-adj.out
 net ve.extruder-vel-adjusted => hpg.stepgen.04.velocity-cmd
 
 # axis enable chain
-#newsig emcmot.03.enable bit
-#sets emcmot.03.enable FALSE
+newsig emcmot.03.enable bit
+sets emcmot.03.enable TRUE
 
-net emcmot.03.enable <= axis.3.amp-enable-out
+#net emcmot.03.enable <= axis.3.amp-enable-out
 net emcmot.03.enable => hpg.stepgen.04.enable
 
 # position command and feedback
@@ -1152,9 +1154,13 @@ net l0.g                 <= motion.analog-out-io-27
 net l0.b                 <= motion.analog-out-io-28
 net l0.w                 <= motion.analog-out-io-29
 net probe.sel-f          <= motion.analog-out-38
+net ve.line-area         <= motion.analog-out-41
+net ve.jog-velocity      <= motion.analog-out-io-42
+net ve.jog-distance      <= motion.analog-out-io-43
 
 net probe.enable         <= motion.digital-out-00
-net ve.extruder-enable      <= motion.digital-out-01
+net ve.extruder-enable   <= motion.digital-out-01
+net ve.jog-trigger       <= motion.digital-out-io-02
 
 net hbp.temp.meas        => motion.analog-in-00
 #net hbc.temp.meas        => motion.analog-in-01
@@ -1171,6 +1177,7 @@ net l0.w                 => motion.analog-in-29
 net hbp.temp.in-range   => motion.digital-in-00
 #net hbc.temp.in-range   => motion.digital-in-01
 net e0.temp.in-range    => motion.digital-in-02
+net ve.jog-trigger      => motion.digital-in-12
 
 # ##################################################
 # Estop chain, watchdog and charge-pump
