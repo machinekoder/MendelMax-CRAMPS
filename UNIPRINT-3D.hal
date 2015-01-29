@@ -56,7 +56,7 @@ loadrt mux4 names=mux4.ve
 loadrt oneshot names=oneshot.feed-hold,oneshot.retract,oneshot.ve-jog
 loadrt ddt names=ddt.extruder-accel
 loadrt or2 names=or2.ve-jog-enable
-loadrt abs names=abs.ve-jog-time
+loadrt abs names=abs.ve-jog-time,abs.nozzle-vel
 
 addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
@@ -119,6 +119,7 @@ addf   estopchain                           servo-thread
 
 # velocity extruding
 addf hypot.nozzle-vel                       servo-thread
+addf abs.nozzle-vel                         servo-thread
 addf mult2.nozzle-discharge                 servo-thread
 addf mult2.filament-area                    servo-thread
 addf mult2.filament-dia                     servo-thread
@@ -411,7 +412,9 @@ setp hpg.stepgen.03.dirpin          [AXIS_2]DIRPIN_LEFT
 net ve.xvel axis.0.joint-vel-cmd => hypot.nozzle-vel.in0
 net ve.yvel axis.1.joint-vel-cmd => hypot.nozzle-vel.in1
 net ve.zvel axis.2.joint-vel-cmd => hypot.nozzle-vel.in2
-net ve.nozzle-vel <= hypot.nozzle-vel.out
+net ve.nozzle-vel-signed <= hypot.nozzle-vel.out
+net ve.nozzle-vel-signed => abs.nozzle-vel.in
+net ve.nozzle-vel        <= abs.nozzle-vel.out
 
 # multiply area with speed and we get discharge (mm^3 per second)
 net ve.line-area => mult2.nozzle-discharge.in0
@@ -509,7 +512,7 @@ net ve.extruder-accel <= ddt.extruder-accel.out
 net ve.extruder-accel => mult2.extruder-vel-adj.in0
 net ve.extruder-vel-adj-gain => mult2.extruder-vel-adj.in1
 net ve.vel-adjustment <= mult2.extruder-vel-adj.out
-sets ve.extruder-vel-adj-gain 7.0
+sets ve.extruder-vel-adj-gain 0.05
 # get adjusted speed for adding to current speed during accelleration
 net ve.extruder-vel => sum2.extruder-vel-adj.in0
 net ve.vel-adjustment => sum2.extruder-vel-adj.in1
@@ -519,10 +522,9 @@ net ve.extruder-vel-adjusted => hpg.stepgen.04.velocity-cmd
 
 # axis enable chain
 newsig emcmot.03.enable bit
-sets emcmot.03.enable TRUE
-
 #net emcmot.03.enable <= axis.3.amp-enable-out
 net emcmot.03.enable => hpg.stepgen.04.enable
+sets emcmot.03.enable TRUE
 
 # position command and feedback
 #net emcmot.03.pos-cmd <= axis.3.motor-pos-cmd
@@ -1154,7 +1156,7 @@ net l0.g                 <= motion.analog-out-io-27
 net l0.b                 <= motion.analog-out-io-28
 net l0.w                 <= motion.analog-out-io-29
 net probe.sel-f          <= motion.analog-out-38
-net ve.line-area         <= motion.analog-out-41
+net ve.line-area         <= motion.analog-out-30 # should be 41
 net ve.jog-velocity      <= motion.analog-out-io-42
 net ve.jog-distance      <= motion.analog-out-io-43
 

@@ -1,5 +1,5 @@
 o<m600> sub
-#500=41; filament area index
+#500=30; filament area index, is 41, workaround
 #501=1; synchronized
 #502=#500
 o100 if [EXISTS[#<i>]]
@@ -7,9 +7,9 @@ o100 if [EXISTS[#<i>]]
         #501=0
     o110 endif
 o100 endif
-o102 if [#501 EQ 1]
+o101 if [#501 EQ 1]
     M67 E#502 Q#<S>
-o102 else
+o101 else
     M68 E#502 Q#<S>
-o102 endif
+o101 endif
 o<m600> end sub
