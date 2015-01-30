@@ -1261,12 +1261,11 @@ net ve.jog-velocity    <=> fdm-ve-jog.velocity
 net ve.jog-distance    <=> fdm-ve-jog.distance
 net ve.jog-dtg          => fdm-ve-jog.dtg
 setp fdm-ve-jog.max-velocity [AXIS_3]MAX_VELOCITY
-
-net fdm-ve-params.filament-dia     <=> ve.filament-dia
-net fdm-ve-params.retract-vel      <=> ve.retract-vel
-net fdm-ve-params.retract-len      <=> ve.retract-len
-net fdm-ve-params.extrude-scale    <=> ve.extrude-scale
-net fdm-ve-params.accel-adj-gain   <=> ve.extrude-accel-adj-gain
+net ve.filament-dia             <=> fdm-ve-params.filament-dia
+net ve.retract-vel              <=> fdm-ve-params.retract-vel
+net ve.retract-len              <=> fdm-ve-params.retract-len
+net ve.extrude-scale            <=> fdm-ve-params.extrude-scale
+net ve.extrude-accel-adj-gain   <=> fdm-ve-params.accel-adj-gain
 
 # monitor the estop error sources
 newg error-sources 100
