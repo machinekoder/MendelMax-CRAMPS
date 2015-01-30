@@ -39,7 +39,7 @@ loadrt thermistor_check names=thermistor-check.e0,thermistor-check.hbp
 loadrt not names=not.e0-temp-range,not.hbp-temp-range,not.e0-error,not.hbp-error
 loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,wcomp.hbp-temp-limit
 loadrt lowpass names=lowpass.e0-temp,lowpass.hbp-temp
-loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos,sum2.extruder-vel-adj
+loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos,sum2.extrude-rate-adj
 loadrt and2 names=and2.probe
 loadrt mux2 names=mux2.exp0-pwm,mux2.ve-base-vel
 loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103,0x103 # and 8 and 3 inputs
@@ -50,8 +50,8 @@ loadrt mux_generic config=bb4 # mux-gen.00 for probe
 loadrt conv_float_u32 names=f2u.probe-sel
 
 loadrt hypot names=hypot.nozzle-vel
-loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-area,mult2.filament-dia,mult2.extrude-rate,mult2.retract-time,mult2.extruder-vel-adj,mult2.ve-jog-time,mult2.ve-jog-dtg
-loadrt invert names=invert.filament-area,invert.retract-time,invert.ve-jog-time
+loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-dia,mult2.extrude-rate,mult2.extrude-accel-adj,mult2.ve-jog-dtg,mult2.retract-vel-neg,mult2.extrude-rate-scaled
+loadrt div2 names=div2.filament-area,div2.retract-time,div2.ve-jog-time
 loadrt mux4 names=mux4.ve
 loadrt oneshot names=oneshot.feed-hold,oneshot.retract,oneshot.ve-jog
 loadrt ddt names=ddt.extruder-accel
@@ -121,25 +121,24 @@ addf   estopchain                           servo-thread
 addf hypot.nozzle-vel                       servo-thread
 addf abs.nozzle-vel                         servo-thread
 addf mult2.nozzle-discharge                 servo-thread
-addf mult2.filament-area                    servo-thread
 addf mult2.filament-dia                     servo-thread
-addf invert.filament-area                   servo-thread
+addf div2.filament-area                     servo-thread
 addf mult2.extrude-rate                     servo-thread
-addf invert.ve-jog-time                     servo-thread
-addf mult2.ve-jog-time                      servo-thread
+addf mult2.extrude-rate-scaled              servo-thread
+addf ddt.extruder-accel                     servo-thread
+addf sum2.extrude-rate-adj                  servo-thread
+addf mult2.extrude-accel-adj                servo-thread
+addf div2.ve-jog-time                       servo-thread
 addf abs.ve-jog-time                        servo-thread
 addf oneshot.ve-jog                         servo-thread
 addf or2.ve-jog-enable                      servo-thread
 addf mux2.ve-base-vel                       servo-thread
 addf mult2.ve-jog-dtg                       servo-thread
+addf mult2.retract-vel-neg                  servo-thread
 addf mux4.ve                                servo-thread
-addf invert.retract-time                    servo-thread
-addf mult2.retract-time                     servo-thread
+addf div2.retract-time                      servo-thread
 addf oneshot.feed-hold                      servo-thread
 addf oneshot.retract                        servo-thread
-addf ddt.extruder-accel                     servo-thread
-addf sum2.extruder-vel-adj                  servo-thread
-addf mult2.extruder-vel-adj                 servo-thread
 
 # Update functions
 addf   gantry.z.write                       servo-thread
@@ -228,13 +227,22 @@ newpin fdm-l0 fdm-l0.b float io
 newpin fdm-l0 fdm-l0.w float io
 ready  fdm-l0
 
-newcomp fdm-ve timer=100
-newpin fdm-ve fdm-ve.jog-distance  float io
-newpin fdm-ve fdm-ve.jog-velocity  float io
-newpin fdm-ve fdm-ve.jog-trigger   bit   io
-newpin fdm-ve fdm-ve.jog-continous bit   out
-newpin fdm-ve fdm-ve.jog-dtg       float in
-ready  fdm-ve
+newcomp fdm-ve-jog timer=100
+newpin fdm-ve-jog fdm-ve-jog.distance       float io
+newpin fdm-ve-jog fdm-ve-jog.velocity       float io
+newpin fdm-ve-jog fdm-ve-jog.trigger        bit   io
+newpin fdm-ve-jog fdm-ve-jog.continous      bit   out
+newpin fdm-ve-jog fdm-ve-jog.dtg            float in
+newpin fdm-ve-jog fdm-ve-jog.max-velocity   float in
+ready  fdm-ve-jog
+
+newcomp fdm-ve-params timer=100
+newpin fdm-ve-params fdm-ve-params.filament-dia     float io
+newpin fdm-ve-params fdm-ve-params.retract-vel      float io
+newpin fdm-ve-params fdm-ve-params.retract-len      float io
+newpin fdm-ve-params fdm-ve-params.extrude-scale    float io
+newpin fdm-ve-params fdm-ve-params.accel-adj-gain   float io
+ready  fdm-ve-params
 
 newcomp fdm-e0-pid timer=100
 newpin fdm-e0-pid fdm-e0-pid.Pgain              float io
@@ -417,30 +425,45 @@ net ve.nozzle-vel-signed => abs.nozzle-vel.in
 net ve.nozzle-vel        <= abs.nozzle-vel.out
 
 # multiply area with speed and we get discharge (mm^3 per second)
-net ve.line-area => mult2.nozzle-discharge.in0
-net ve.nozzle-vel => mult2.nozzle-discharge.in1
+net ve.line-area        => mult2.nozzle-discharge.in0
+net ve.nozzle-vel       => mult2.nozzle-discharge.in1
 net ve.nozzle-discharge <= mult2.nozzle-discharge.out
 
 # calculate filament cross section area
 # PI divided by 4
 setp mult2.filament-area.in0 0.78539816339
-setp mult2.filament-dia.in0 [EXTRUDER_0]FILAMENT_DIA
-setp mult2.filament-dia.in1 [EXTRUDER_0]FILAMENT_DIA
-net diameter-squared mult2.filament-dia.out => mult2.filament-area.in1
-net filament-area mult2.filament-area.out => invert.filament-area.in
-net ve.divide-by-filament-area <= invert.filament-area.out
+net ve.filament-dia => mult2.filament-dia.in0
+net ve.filament-dia => mult2.filament-dia.in1
+net ve.filament-dia-squared mult2.filament-dia.out => mult2.filament-area.in1
+net ve.filament-area <= mult2.filament-area.out
 
 # calculate extrude rate
-net ve.nozzle-discharge => mult2.extrude-rate.in0
-net ve.divide-by-filament-area => mult2.extrude-rate.in1
-net ve.extrude-rate <= mult2.extrude-rate.out
+net ve.nozzle-discharge => div2.extrude-rate.in0
+net ve.filament-area    => div2.extrude-rate.in1
+net ve.extrude-rate     <= div2.extrude-rate.out
+
+# scale extrude rate
+net ve.extrude-rate  => mult2.extrude-rate-scaled.in0
+net ve.extrude-scale => mult2.extrude-rate-scaled.in1
+net ve.extrude-rate-scaled <= mult2.extrude-rate-scaled.out
+
+# these are used for a small offset in velocity during acceleration (buildup pressure inside
+# the nozzle because of the current speed. Take the maximum accel you've specified in .ini
+# get acceleration into lincurve
+net ve.extrude-rate-scaled    => ddt.extruder-accel.in
+net ve.extrude-accel          <= ddt.extruder-accel.out
+net ve.extrude-accel          => mult2.extrude-accel-adj.in0
+net ve.extrude-accel-adj-gain => mult2.extrude-accel-adj.in1
+net ve.extrude-accel-adj      <= mult2.extrude-accel-adj.out
+# get adjusted speed for adding to current speed during accelleration
+net ve.extrude-rate-scaled    => sum2.extrude-rate-adj.in0
+net ve.extrude-accel-adj      => sum2.extrude-rate-adj.in1
+net ve.extrude-rate-adj       <= sum2.extrude-rate-adj.out
 
 # Velocity extruding jog support
-net ve.jog-velocity      => invert.ve-jog-time.in
-net ve.divide-by-jog-vel <= invert.ve-jog-time.out
-net ve.jog-distance      => mult2.ve-jog-time.in0
-net ve.divide-by-jog-vel => mult2.ve-jog-time.in1
-net ve.jog-time-signed   <= mult2.ve-jog-time.out
+net ve.jog-distance      => div2.ve-jog-time.in0
+net ve.jog-velocity      => div2.ve-jog-time.in1
+net ve.jog-time-signed   <= div2.ve-jog-time.out
 net ve.jog-time-signed   => abs.ve-jog-time.in
 net ve.jog-time          <= abs.ve-jog-time.out
 
@@ -465,23 +488,26 @@ net ve.jog-velocity  => mult2.ve-jog-dtg.in0
 net ve.jog-time-left => mult2.ve-jog-dtg.in1
 net ve.jog-dtg       <= mult2.ve-jog-dtg.out
 
+# negative retract velocity
+net ve.retract-vel => mult2.retract-vel-neg.in0
+setp mult2.retract-vel-neg.in1 -1.0
+net ve.retract-vel-neg <= mult2.retract-vel-neg.out
+
 # now the solution of Andy Pugh for automatically retracting/priming
 #00 = motion without extrusion, jog
 #01 = retract
 #10 = motion with extrusion
 #11 = pre-charge
-net ve.base-vel => mux4.ve.in0
-setp mux4.ve.in1 -[EXTRUDER_0]RETRACT_VEL
-net ve.extrude-rate => mux4.ve.in2
-setp mux4.ve.in3 [EXTRUDER_0]RETRACT_VEL
-net ve.extruder-vel <= mux4.ve.out
+net ve.base-vel            => mux4.ve.in0
+net ve.retract-vel-neg     => mux4.ve.in1
+net ve.extrude-rate-adj    => mux4.ve.in2
+net ve.retract-vel         => mux4.ve.in3
+net ve.extrude-vel         <= mux4.ve.out
 
 # calculate retract time
-setp invert.retract-time.in [EXTRUDER_0]RETRACT_VEL
-net ve.divide-by-retract-vel <= invert.retract-time.out
-setp mult2.retract-time.in0 [EXTRUDER_0]RETRACT_LENGTH
-net ve.divide-by-retract-vel => mult2.retract-time.in1
-net ve.retract-time <= mult2.retract-time.out
+net ve.retract-len    => div2.retract-time.in0
+net ve.retract-vel    => div2.retract-time.in1
+net ve.retract-time   <= div2.retract-time.out
 
 # We want the retract-charge to run for a fixed time:
 # when sel0 set to "1" meaning motion with extrusion" the on the rising edge
@@ -504,21 +530,12 @@ setp oneshot.feed-hold.retriggerable 1
 #by setting the width, the automatic retract/precharge can be disabled
 net ve.retract-time => oneshot.retract.width oneshot.feed-hold.width
 
-# these are used for a small offset in velocity during acceleration (buildup pressure inside
-# the nozzle because of the current speed. Take the maximum accel you've specified in .ini
-# get acceleration into lincurve
-net ve.extruder-vel => ddt.extruder-accel.in
-net ve.extruder-accel <= ddt.extruder-accel.out
-net ve.extruder-accel => mult2.extruder-vel-adj.in0
-net ve.extruder-vel-adj-gain => mult2.extruder-vel-adj.in1
-net ve.vel-adjustment <= mult2.extruder-vel-adj.out
-sets ve.extruder-vel-adj-gain 0.05
-# get adjusted speed for adding to current speed during accelleration
-net ve.extruder-vel => sum2.extruder-vel-adj.in0
-net ve.vel-adjustment => sum2.extruder-vel-adj.in1
-net ve.extruder-vel-adjusted <= sum2.extruder-vel-adj.out
-
-net ve.extruder-vel-adjusted => hpg.stepgen.04.velocity-cmd
+net ve.extrude-vel => hpg.stepgen.04.velocity-cmd
+sets ve.retract-len [EXTRUDER_0]RETRACT_LENGTH
+sets ve.retract-vel [EXTRUDER_0]RETRACT_VEL
+sets ve.filament-dia [EXTRUDER_0]FILAMENT_DIA
+sets ve.extrude-accel-adj-gain 0.05
+sets ve.extrude-scale 1.0
 
 # axis enable chain
 newsig emcmot.03.enable bit
@@ -1238,11 +1255,18 @@ net l0.r               <=> fdm-l0.r
 net l0.g               <=> fdm-l0.g
 net l0.b               <=> fdm-l0.b
 net l0.w               <=> fdm-l0.w
-net ve.jog-trigger     <=> fdm-ve.jog-trigger
-net ve.jog-continous   <=  fdm-ve.jog-continous
-net ve.jog-velocity    <=> fdm-ve.jog-velocity
-net ve.jog-distance    <=> fdm-ve.jog-distance
-net ve.jog-dtg          => fdm-ve.jog-dtg
+net ve.jog-trigger     <=> fdm-ve-jog.trigger
+net ve.jog-continous   <=  fdm-ve-jog.continous
+net ve.jog-velocity    <=> fdm-ve-jog.velocity
+net ve.jog-distance    <=> fdm-ve-jog.distance
+net ve.jog-dtg          => fdm-ve-jog.dtg
+setp fdm-ve-jog.max-velocity [AXIS_3]MAX_VELOCITY
+
+net fdm-ve-params.filament-dia     <=> ve.filament-dia
+net fdm-ve-params.retract-vel      <=> ve.retract-vel
+net fdm-ve-params.retract-len      <=> ve.retract-len
+net fdm-ve-params.extrude-scale    <=> ve.extrude-scale
+net fdm-ve-params.accel-adj-gain   <=> ve.extrude-accel-adj-gain
 
 # monitor the estop error sources
 newg error-sources 100
