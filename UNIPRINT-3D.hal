@@ -41,7 +41,7 @@ loadrt wcomp names=wcomp.e0-temp-range,wcomp.hbp-temp-range,wcomp.e0-temp-limit,
 loadrt lowpass names=lowpass.e0-temp,lowpass.hbp-temp
 loadrt sum2 names=sum2.e0-temp-range-neg,sum2.e0-temp-range-pos,sum2.hbp-temp-range-neg,sum2.hbp-temp-range-pos,sum2.extrude-rate-adj
 loadrt and2 names=and2.probe
-loadrt mux2 names=mux2.exp0-pwm,mux2.ve-base-vel
+loadrt mux2 names=mux2.exp0-pwm,mux2.ve-base-vel,mux2.jog-velocity-signed
 loadrt logic names=estopchain,and3.e0-no-error,and3.hbp-no-error personality=0x108,0x103,0x103 # and 8 and 3 inputs
 loadrt comp names=comp.exp0-temp,comp.hbp-hot,comp.e0-active,comp.hbp-active
 loadrt select8 names=select8.extruder
@@ -50,13 +50,13 @@ loadrt mux_generic config=bb4 # mux-gen.00 for probe
 loadrt conv_float_u32 names=f2u.probe-sel
 
 loadrt hypot names=hypot.nozzle-vel
-loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-dia,mult2.filament-area,mult2.extrude-accel-adj,mult2.ve-jog-dtg,mult2.retract-vel-neg,mult2.extrude-rate-scaled
+loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-dia,mult2.filament-area,mult2.extrude-accel-adj,mult2.ve-jog-dtg,mult2.retract-vel-neg,mult2.extrude-rate-scaled,mult2.jog-velocity-neg
 loadrt div2 names=div2.extrude-rate,div2.retract-time,div2.ve-jog-time
 loadrt mux4 names=mux4.ve
 loadrt oneshot names=oneshot.feed-hold,oneshot.retract,oneshot.ve-jog
 loadrt ddt names=ddt.extruder-accel
 loadrt or2 names=or2.ve-jog-enable
-loadrt abs names=abs.ve-jog-time,abs.nozzle-vel
+loadrt abs names=abs.nozzle-vel
 
 addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
@@ -128,8 +128,9 @@ addf mult2.extrude-rate-scaled              servo-thread
 addf ddt.extruder-accel                     servo-thread
 addf sum2.extrude-rate-adj                  servo-thread
 addf mult2.extrude-accel-adj                servo-thread
+addf mult2.jog-velocity-neg                 servo-thread
+addf mux2.jog-velocity-signed               servo-thread
 addf div2.ve-jog-time                       servo-thread
-addf abs.ve-jog-time                        servo-thread
 addf oneshot.ve-jog                         servo-thread
 addf or2.ve-jog-enable                      servo-thread
 addf mux2.ve-base-vel                       servo-thread
@@ -230,6 +231,7 @@ ready  fdm-l0
 newcomp fdm-ve-jog timer=100
 newpin fdm-ve-jog fdm-ve-jog.distance       float io
 newpin fdm-ve-jog fdm-ve-jog.velocity       float io
+newpin fdm-ve-jog fdm-ve-jog.direction      bit   io
 newpin fdm-ve-jog fdm-ve-jog.trigger        bit   io
 newpin fdm-ve-jog fdm-ve-jog.continous      bit   out
 newpin fdm-ve-jog fdm-ve-jog.dtg            float in
@@ -461,11 +463,18 @@ net ve.extrude-accel-adj      => sum2.extrude-rate-adj.in1
 net ve.extrude-rate-adj       <= sum2.extrude-rate-adj.out
 
 # Velocity extruding jog support
-net ve.jog-distance      => div2.ve-jog-time.in0
-net ve.jog-velocity      => div2.ve-jog-time.in1
-net ve.jog-time-signed   <= div2.ve-jog-time.out
-net ve.jog-time-signed   => abs.ve-jog-time.in
-net ve.jog-time          <= abs.ve-jog-time.out
+net ve.jog-velocity => mult2.jog-velocity-neg.in0
+setp mult2.jog-velocity-neg.in1 -1.0
+net ve.jog-velocity-neg <= mult2.jog-velocity-neg.out
+
+net ve.jog-velocity        => mux2.jog-velocity-signed.in0
+net ve.jog-velocity-neg    => mux2.jog-velocity-signed.in1
+net ve.jog-direction       => mux2.jog-velocity-signed.sel
+net ve.jog-velocity-signed <= mux2.jog-velocity-signed.out
+
+net ve.jog-distance => div2.ve-jog-time.in0
+net ve.jog-velocity => div2.ve-jog-time.in1
+net ve.jog-time     <= div2.ve-jog-time.out
 
 net ve.jog-trigger => oneshot.ve-jog.in
 net ve.jog-time    => oneshot.ve-jog.width
@@ -478,10 +487,10 @@ net ve.jog-continous => or2.ve-jog-enable.in0
 net ve.jog-active    => or2.ve-jog-enable.in1
 net ve.jog-enable    <= or2.ve-jog-enable.out
 
-net ve.jog-enable => mux2.ve-base-vel.sel
+net ve.jog-enable          => mux2.ve-base-vel.sel
 setp mux2.ve-base-vel.in0 0.0
-net ve.jog-velocity => mux2.ve-base-vel.in1
-net ve.base-vel <= mux2.ve-base-vel.out
+net ve.jog-velocity-signed => mux2.ve-base-vel.in1
+net ve.base-vel            <= mux2.ve-base-vel.out
 
 net ve.jog-time-left <= oneshot.ve-jog.time-left
 net ve.jog-velocity  => mult2.ve-jog-dtg.in0
@@ -1259,6 +1268,7 @@ net ve.jog-trigger     <=> fdm-ve-jog.trigger
 net ve.jog-continous   <=  fdm-ve-jog.continous
 net ve.jog-velocity    <=> fdm-ve-jog.velocity
 net ve.jog-distance    <=> fdm-ve-jog.distance
+net ve.jog-direction   <=> fdm-ve-jog.direction
 net ve.jog-dtg          => fdm-ve-jog.dtg
 setp fdm-ve-jog.max-velocity [AXIS_3]MAX_VELOCITY
 net ve.filament-dia             <=> fdm-ve-params.filament-dia
