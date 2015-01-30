@@ -50,8 +50,8 @@ loadrt mux_generic config=bb4 # mux-gen.00 for probe
 loadrt conv_float_u32 names=f2u.probe-sel
 
 loadrt hypot names=hypot.nozzle-vel
-loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-dia,mult2.extrude-rate,mult2.extrude-accel-adj,mult2.ve-jog-dtg,mult2.retract-vel-neg,mult2.extrude-rate-scaled
-loadrt div2 names=div2.filament-area,div2.retract-time,div2.ve-jog-time
+loadrt mult2 names=mult2.nozzle-discharge,mult2.filament-dia,mult2.filament-area,mult2.extrude-accel-adj,mult2.ve-jog-dtg,mult2.retract-vel-neg,mult2.extrude-rate-scaled
+loadrt div2 names=div2.extrude-rate,div2.retract-time,div2.ve-jog-time
 loadrt mux4 names=mux4.ve
 loadrt oneshot names=oneshot.feed-hold,oneshot.retract,oneshot.ve-jog
 loadrt ddt names=ddt.extruder-accel
@@ -122,8 +122,8 @@ addf hypot.nozzle-vel                       servo-thread
 addf abs.nozzle-vel                         servo-thread
 addf mult2.nozzle-discharge                 servo-thread
 addf mult2.filament-dia                     servo-thread
-addf div2.filament-area                     servo-thread
-addf mult2.extrude-rate                     servo-thread
+addf mult2.filament-area                    servo-thread
+addf div2.extrude-rate                      servo-thread
 addf mult2.extrude-rate-scaled              servo-thread
 addf ddt.extruder-accel                     servo-thread
 addf sum2.extrude-rate-adj                  servo-thread
