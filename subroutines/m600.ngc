@@ -1,5 +1,5 @@
 o<m600> sub
-#500=30; filament area index, is 41, workaround
+#500=41; filament area index
 #501=1; synchronized
 #502=#500
 o100 if [EXISTS[#<i>]]
