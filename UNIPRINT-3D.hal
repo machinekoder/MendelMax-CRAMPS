@@ -540,7 +540,7 @@ setp oneshot.feed-hold.retriggerable 1
 net ve.retract-time => oneshot.retract.width oneshot.feed-hold.width
 
 net ve.extrude-vel => hpg.stepgen.04.velocity-cmd
-sets ve.retract-len [EXTRUDER_0]RETRACT_LENGTH
+sets ve.retract-len [EXTRUDER_0]RETRACT_LEN
 sets ve.retract-vel [EXTRUDER_0]RETRACT_VEL
 sets ve.filament-dia [EXTRUDER_0]FILAMENT_DIA
 sets ve.extrude-accel-adj-gain 0.05
