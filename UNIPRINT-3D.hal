@@ -236,6 +236,7 @@ newpin fdm-ve-jog fdm-ve-jog.trigger        bit   io
 newpin fdm-ve-jog fdm-ve-jog.continous      bit   out
 newpin fdm-ve-jog fdm-ve-jog.dtg            float in
 newpin fdm-ve-jog fdm-ve-jog.max-velocity   float in
+newpin fdm-ve-jog fdm-ve-jog.extruder-en    bit   io
 ready  fdm-ve-jog
 
 newcomp fdm-ve-params timer=100
@@ -1188,7 +1189,7 @@ net ve.jog-distance      <= motion.analog-out-io-43
 net ve.filament-dia      <= motion.analog-out-io-44
 
 net probe.enable         <= motion.digital-out-00
-net ve.extruder-enable   <= motion.digital-out-01
+net ve.extruder-enable   <= motion.digital-out-io-01
 net ve.jog-trigger       <= motion.digital-out-io-02
 
 net hbp.temp.meas        => motion.analog-in-00
@@ -1271,6 +1272,7 @@ net ve.jog-velocity    <=> fdm-ve-jog.velocity
 net ve.jog-distance    <=> fdm-ve-jog.distance
 net ve.jog-direction   <=> fdm-ve-jog.direction
 net ve.jog-dtg          => fdm-ve-jog.dtg
+net ve.extruder-enable <=> fdm-ve-jog.extruder-en
 setp fdm-ve-jog.max-velocity [AXIS_3]MAX_VELOCITY
 net ve.filament-dia             <=> fdm-ve-params.filament-dia
 net ve.retract-vel              <=> fdm-ve-params.retract-vel
