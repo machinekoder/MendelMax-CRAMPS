@@ -1286,7 +1286,7 @@ net ve.extrude-scale            <=> fdm-ve-params.extrude-scale
 net ve.extrude-accel-adj-gain   <=> fdm-ve-params.accel-adj-gain
 
 net home-offset-zr      <=> gantry-config.offset-right
-net home-offset-zr      <=> gantry-config.offset-left
+net home-offset-zl      <=> gantry-config.offset-left
 
 # monitor the estop error sources
 newg error-sources 100
