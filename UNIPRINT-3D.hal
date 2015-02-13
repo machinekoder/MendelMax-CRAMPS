@@ -247,6 +247,11 @@ newpin fdm-ve-params fdm-ve-params.extrude-scale    float io
 newpin fdm-ve-params fdm-ve-params.accel-adj-gain   float io
 ready  fdm-ve-params
 
+newcomp gantry-config timer=100
+newpin gantry-config gantry-config.offset-left  float io
+newpin gantry-config gantry-config.offset-right float io
+ready gantry-config
+    
 newcomp fdm-e0-pid timer=100
 newpin fdm-e0-pid fdm-e0-pid.Pgain              float io
 newpin fdm-e0-pid fdm-e0-pid.Igain              float io
@@ -260,7 +265,7 @@ newpin fdm-e0-pid fdm-e0-pid.feedback           float in
 newpin fdm-e0-pid fdm-e0-pid.output             float in
 ready  fdm-e0-pid
 
-# ############1##########################################
+# ######################################################
 # Axis-of-motion Specific Configs (not the GUI)
 # ######################################################
 
@@ -1279,6 +1284,9 @@ net ve.retract-vel              <=> fdm-ve-params.retract-vel
 net ve.retract-len              <=> fdm-ve-params.retract-len
 net ve.extrude-scale            <=> fdm-ve-params.extrude-scale
 net ve.extrude-accel-adj-gain   <=> fdm-ve-params.accel-adj-gain
+
+net home-offset-zr      <=> gantry-config.offset-right
+net home-offset-zr      <=> gantry-config.offset-left
 
 # monitor the estop error sources
 newg error-sources 100
