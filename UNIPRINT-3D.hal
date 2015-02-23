@@ -539,7 +539,7 @@ setp oneshot.retract.falling 1
 setp oneshot.retract.retriggerable 1
 # wait unretract to finish before continuing move
 setp oneshot.feed-hold.rising 1
-setp oneshot.feed-hold.falling 0
+setp oneshot.feed-hold.falling 1
 setp oneshot.feed-hold.retriggerable 1
 #setp oneshot.0.width 0.0
 #by setting the width, the automatic retract/precharge can be disabled
