@@ -57,6 +57,7 @@ loadrt oneshot names=oneshot.feed-hold,oneshot.retract,oneshot.ve-jog
 loadrt ddt names=ddt.extruder-accel
 loadrt or2 names=or2.ve-jog-enable
 loadrt abs names=abs.nozzle-vel
+loadrt reset names=reset.extruder-en
 
 addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
@@ -136,6 +137,7 @@ addf or2.ve-jog-enable                      servo-thread
 addf mux2.ve-base-vel                       servo-thread
 addf mult2.ve-jog-dtg                       servo-thread
 addf mult2.retract-vel-neg                  servo-thread
+addf reset.extruder-en                      servo-thread
 addf mux4.ve                                servo-thread
 addf div2.retract-time                      servo-thread
 addf oneshot.feed-hold                      servo-thread
@@ -507,6 +509,14 @@ net ve.jog-dtg       <= mult2.ve-jog-dtg.out
 net ve.retract-vel => mult2.retract-vel-neg.in0
 setp mult2.retract-vel-neg.in1 -1.0
 net ve.retract-vel-neg <= mult2.retract-vel-neg.out
+
+# disable extruder on jog
+setp reset.extruder-en.rising 1
+setp reset.extruder-en.falling 1
+setp reset.extruder-en.retriggerable 1
+setp reset.extruder-en.reset-bit 0
+net ve.jog-trigger => reset.extruder-en.trigger
+net ve.extruder-en <= reset.extruder-en.out-bit
 
 # now the solution of Andy Pugh for automatically retracting/priming
 #00 = motion without extrusion, jog
