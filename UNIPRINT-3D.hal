@@ -212,17 +212,17 @@ newcomp fdm-f0 timer=100
 newpin fdm-f0 fdm-f0.set float io
 ready fdm-f0
 
-newcomp fdm-f1 timer=100
-newpin fdm-f1 fdm-f1.set float io
-ready fdm-f1
+#newcomp fdm-f1 timer=100
+#newpin fdm-f1 fdm-f1.set float io
+#ready fdm-f1
 
-newcomp fdm-f2 timer=100
-newpin fdm-f2 fdm-f2.set float io
-ready fdm-f2
+#newcomp fdm-f2 timer=100
+#newpin fdm-f2 fdm-f2.set float io
+#ready fdm-f2
 
-newcomp fdm-f3 timer=100
-newpin fdm-f3 fdm-f3.set float io
-ready fdm-f3
+#newcomp fdm-f3 timer=100
+#newpin fdm-f3 fdm-f3.set float io
+#ready fdm-f3
 
 newcomp fdm-l0 timer=100
 newpin fdm-l0 fdm-l0.r float io
@@ -1282,9 +1282,9 @@ net e0.temp.in-range    => fdm-e0.temp.in-range
 net e0.error            => fdm-e0.error
 net e0.active           => fdm-e0.active
 net f0.set             <=> fdm-f0.set
-net f1.set             <=> fdm-f1.set
-net f2.set             <=> fdm-f2.set
-net f3.set             <=> fdm-f3.set
+#net f1.set             <=> fdm-f1.set
+#net f2.set             <=> fdm-f2.set
+#net f3.set             <=> fdm-f3.set
 net l0.r               <=> fdm-l0.r
 net l0.g               <=> fdm-l0.g
 net l0.b               <=> fdm-l0.b
@@ -1330,4 +1330,5 @@ net home-offset-zl     <=> storage.gantry.home-offset-zl
 net ve.retract-vel     <=> storage.retract.velocity
 net ve.retract-len     <=> storage.retract.length
 net ve.filament-dia    <=> storage.filament.diameter
+net ve.jog-velocity    <=> storage.extruder.jog-velocity
 setp storage.read-trigger 1 # trigger read
