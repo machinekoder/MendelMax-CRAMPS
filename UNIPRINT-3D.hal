@@ -59,6 +59,7 @@ loadrt ddt names=ddt.extruder-accel
 loadrt or2 names=or2.ve-jog-enable
 loadrt abs names=abs.nozzle-vel
 loadrt reset names=reset.extruder-en1,reset.extruder-en2
+loadrt xor2 names=xor2.extruder-en-fb
 
 addf   hpg.capture-position                 servo-thread
 addf   bb_gpio.read                         servo-thread
@@ -140,9 +141,10 @@ addf mult2.ve-jog-dtg                       servo-thread
 addf mult2.retract-vel-neg                  servo-thread
 addf reset.extruder-en1                     servo-thread
 addf reset.extruder-en2                     servo-thread
-addf mux4.ve                                servo-thread
 addf div2.retract-time                      servo-thread
 addf oneshot.retract                        servo-thread
+addf mux4.ve                                servo-thread
+addf xor2.extruder-en-fb                    servo-thread
 
 # Update functions
 addf   gantry.z.write                       servo-thread
@@ -548,8 +550,10 @@ net ve.retract-time   <= div2.retract-time.out
 # sel combination is 11
 # when sel1 set to "0" meaning decoupling motion with extrusion" then the falling edge
 # will trigger a 01 combination, meaning a retract
-net ve.extruder-en => oneshot.retract.in mux4.ve.sel1
-net ve.retract oneshot.retract.out => mux4.ve.sel0
+net ve.extruder-en => oneshot.retract.in mux4.ve.sel1 xor2.extruder-en-fb.in0
+net ve.retract oneshot.retract.out => mux4.ve.sel0 xor2.extruder-en-fb.in1
+# create a signal that displays the actuall extruder enable state
+net ve.extruder-en-fb <= xor2.extruder-en-fb.out
 # trigger a retract/unretract move when extruder is enable or disabled
 setp oneshot.retract.rising 1
 setp oneshot.retract.falling 1
@@ -1226,7 +1230,7 @@ net l0.w                 => motion.analog-in-29
 net hbp.temp.in-range   => motion.digital-in-00
 #net hbc.temp.in-range   => motion.digital-in-01
 net e0.temp.in-range    => motion.digital-in-02
-net ve.retract          => motion.digital-in-12
+net ve.extruder-en-fb   => motion.digital-in-12
 net ve.jog-trigger      => motion.digital-in-13
 
 
