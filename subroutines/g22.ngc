@@ -1,9 +1,7 @@
 o<g22> sub
 o100 if [#<_ini[FDM]VELOCITY_EXTRUSION_ENABLE> EQ 1]
     #502=1 ; extruder enable index
-    #503=12 ; feed-hold index
     M65 P#502
-    M66 P#503 L4 Q1000 ; wait until retract is finished
 o100 else
     #500=#<_a>
     o110 if [#<_selected_tool> EQ  0]
@@ -38,6 +36,6 @@ o100 else
         #502=#<_ini[EXTRUDER_9]RETRACT_VEL>
     o110 endif
     G1 A[#500+#501] F#502
-    G92 A#500    
-o100 endif  
+    G92 A#500
+o100 endif
 o<g22> end sub

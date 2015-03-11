@@ -2,7 +2,7 @@ o<m601> sub
 #500=45 ; jog velocity index
 #501=46 ; jog distance index
 #502=2 ; jog trigger write
-#503=13 ; jog trigger read
+#503=12 ; jog trigger read
 M68 E#500 Q#<P>
 M68 E#501 Q#<S>
 M66 P#503 L0
