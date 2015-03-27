@@ -28,7 +28,7 @@ loadrt gantry_latching names=gantry.z personality=2
 
 # load low-level drivers
 loadrt hal_bb_gpio output_pins=807,819,826,926 input_pins=941
-loadrt [PRUCONF](DRIVER) prucode=[PRUCONF](PRUBIN) [PRUCONF](CONFIG) halname=hpg
+loadrt [PRUCONF](DRIVER) prucode=$(HAL_RTMOD_DIR)/[PRUCONF](PRUBIN) [PRUCONF](CONFIG) halname=hpg
 
 # other components
 loadrt pid names=pid.e0-temp,pid.hbp-temp
