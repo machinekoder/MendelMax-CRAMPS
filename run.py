@@ -3,9 +3,7 @@
 import sys
 import os
 import subprocess
-import importlib
-import argparse
-from time import *
+import time
 from machinekit import launcher
 
 launcher.register_exit_handler()
@@ -15,16 +13,14 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 try:
     launcher.check_installation()
     launcher.cleanup_session()
-    launcher.load_bbio_file('paralell_cape3.bbio')
-    launcher.install_comp('thermistor_check.comp')
-    launcher.install_comp('reset.comp')
-    launcher.install_comp('led_dim.comp')
-    launcher.start_process("configserver -n Uni-print-3D ~/Machineface")
-    launcher.start_process('linuxcnc UNIPRINT-3D.ini')
+    launcher.load_bbio_file('CRAMPS.bbio')
+    launcher.start_process("configserver -n MendelMax ~/Machineface")
+    launcher.start_process('linuxcnc CRAMPS.ini')
+    while True:
+        launcher.check_processes()
+        time.sleep(1)
 except subprocess.CalledProcessError:
     launcher.end_session()
     sys.exit(1)
 
-while True:
-    sleep(1)
-    launcher.check_processes()
+sys.exit(0)
