@@ -61,7 +61,7 @@ base.create_temperature_control(name='hbp', section='HBP',
                                 thread='servo-thread')
 for i in range(0, numExtruders):
     base.create_temperature_control(name='e%i' % i, section='EXTRUDER_%i' % i,
-                                    coolingFan='f%i' % i, hotendFan='exp%i' % i,
+                                    coolingFan='f%i' % i,
                                     hardwareOkSignal='temp-hw-ok',
                                     thread='servo-thread')
 
