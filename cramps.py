@@ -97,7 +97,7 @@ def setup_hardware(thread):
     hal.Pin('hpg.stepgen.00.dirpin').set(812)
     hal.Pin('hpg.stepgen.01.steppin').set(815)
     hal.Pin('hpg.stepgen.01.dirpin').set(814)
-    hal.Pin('hpg.stepgen.02.steppin').set(919)
+    hal.Pin('hpg.stepgen.02.steppin').set(819)
     hal.Pin('hpg.stepgen.02.dirpin').set(818)
     hal.Pin('hpg.stepgen.03.steppin').set(916)
     hal.Pin('hpg.stepgen.03.dirpin').set(912)
