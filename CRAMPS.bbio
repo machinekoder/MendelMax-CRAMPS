@@ -2,7 +2,7 @@
 # title: CRAMPS
 overlay cape-universal
 overlay cape-bone-iio
-overlay cape-univ-emmc
+#overlay cape-univ-emmc
 P8_3 default
 P8_4 default
 P8_5 default
