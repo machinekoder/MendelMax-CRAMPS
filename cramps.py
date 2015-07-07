@@ -32,7 +32,7 @@ def init_hardware():
                 interval=0.05,
                 filter_size=1,
                 cape_board='CRAMPS',
-                channels='02:%s,03:%s,04:%s,05:%s'
+                channels='04:%s,05:%s,02:%s,03:%s'
                 % (c.find('HBP', 'THERMISTOR', defaultThermistor),
                    c.find('EXTRUDER_0', 'THERMISTOR', defaultThermistor),
                    c.find('EXTRUDER_1', 'THERMISTOR', defaultThermistor),
@@ -87,24 +87,24 @@ def setup_hardware(thread):
     hal.Pin('bb_gpio.p9.in-11.invert').set(True)
 
     # ADC
-    hal.Pin('temp.ch-02.value').link('hbp-temp-meas')
-    hal.Pin('temp.ch-03.value').link('e0-temp-meas')
-    hal.Pin('temp.ch-04.value').link('e1-temp-meas')
-    hal.Pin('temp.ch-05.value').link('e2-temp-meas')
+    hal.Pin('temp.ch-04.value').link('hbp-temp-meas')
+    hal.Pin('temp.ch-05.value').link('e0-temp-meas')
+    hal.Pin('temp.ch-02.value').link('e1-temp-meas')
+    hal.Pin('temp.ch-03.value').link('e2-temp-meas')
 
     # Stepper
-    hal.Pin('hpg.stepgen.00.steppin').set(812)
-    hal.Pin('hpg.stepgen.00.dirpin').set(813)
+    hal.Pin('hpg.stepgen.00.steppin').set(813)
+    hal.Pin('hpg.stepgen.00.dirpin').set(812)
     hal.Pin('hpg.stepgen.01.steppin').set(815)
-    hal.Pin('hpg.stepgen.01.dirpin').set(815)
-    hal.Pin('hpg.stepgen.02.steppin').set(918)
-    hal.Pin('hpg.stepgen.02.dirpin').set(819)
-    hal.Pin('hpg.stepgen.03.steppin').set(912)
-    hal.Pin('hpg.stepgen.03.dirpin').set(916)
-    hal.Pin('hpg.stepgen.04.steppin').set(918)
-    hal.Pin('hpg.stepgen.04.dirpin').set(917)
-    hal.Pin('hpg.stepgen.05.steppin').set(926)
-    hal.Pin('hpg.stepgen.05.dirpin').set(924)
+    hal.Pin('hpg.stepgen.01.dirpin').set(814)
+    hal.Pin('hpg.stepgen.02.steppin').set(819)
+    hal.Pin('hpg.stepgen.02.dirpin').set(818)
+    hal.Pin('hpg.stepgen.03.steppin').set(916)
+    hal.Pin('hpg.stepgen.03.dirpin').set(912)
+    hal.Pin('hpg.stepgen.04.steppin').set(917)
+    hal.Pin('hpg.stepgen.04.dirpin').set(918)
+    hal.Pin('hpg.stepgen.05.steppin').set(924)
+    hal.Pin('hpg.stepgen.05.dirpin').set(926)
 
     # machine power
     hal.Pin('bb_gpio.p9.out-23').link('emcmot-0-enable')
