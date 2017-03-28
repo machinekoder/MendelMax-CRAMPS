@@ -5,10 +5,10 @@ from machinekit import rtapi as rt
 from machinekit import hal
 from machinekit import config as c
 
-from config import velocity_extrusion as ve
-from config import base
-from config import storage
-from config import motion
+from fdm.config import velocity_extrusion as ve
+from fdm.config import base
+from fdm.config import storage
+from fdm.config import motion
 import cramps as hardware
 
 # initialize the RTAPI command client
@@ -23,6 +23,7 @@ storage.init_storage('storage.ini')
 # reading functions
 hardware.hardware_read()
 hal.addf('motion-command-handler', 'servo-thread')
+hal.addf('motion-controller', 'servo-thread')
 
 numFans = c.find('FDM', 'NUM_FANS')
 numExtruders = c.find('FDM', 'NUM_EXTRUDERS')
@@ -31,15 +32,15 @@ numLights = c.find('FDM', 'NUM_LIGHTS')
 # Axis-of-motion Specific Configs (not the GUI)
 ve.velocity_extrusion(extruders=numExtruders, thread='servo-thread')
 # X [0] Axis
-base.setup_stepper(section='AXIS_0', axisIndex=0, stepgenIndex=0)
+base.setup_stepper(section='AXIS_0', axisIndex=0, stepgenIndex=0, thread='servo-thread')
 # Y [1] Axis
-base.setup_stepper(section='AXIS_1', axisIndex=1, stepgenIndex=1)
+base.setup_stepper(section='AXIS_1', axisIndex=1, stepgenIndex=1, thread='servo-thread')
 # Z [2] Axis
-base.setup_stepper(section='AXIS_2', axisIndex=2, stepgenIndex=2)
+base.setup_stepper(section='AXIS_2', axisIndex=2, stepgenIndex=2, thread='servo-thread')
 # Extruder, velocity controlled
 for i in range(0, numExtruders):
     base.setup_stepper(section='EXTRUDER_%i' % i, stepgenIndex=3,
-                       velocitySignal='ve-extrude-vel')
+                       velocitySignal='ve-extrude-vel', thread='servo-thread')
 
 # Extruder Multiplexer
 base.setup_extruder_multiplexer(extruders=numExtruders, thread='servo-thread')
@@ -81,7 +82,6 @@ base.setup_probe(thread='servo-thread')
 hardware.setup_hardware(thread='servo-thread')
 
 # write out functions
-hal.addf('motion-controller', 'servo-thread')
 hardware.hardware_write()
 
 # Storage
